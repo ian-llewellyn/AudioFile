@@ -254,7 +254,7 @@ function serviceChange(listItem, newService) {
 	service = newService;
 	$f('player').stop();
 	reloadTimeList();
-	alert($f('player').getPlaylist());
+//	alert($f('player').getPlaylist());
 }
 
 function updateTimer() {
@@ -373,7 +373,7 @@ $(function() {
 </style>
 </head>
 <body>
-<div class="player" id="player" style="width: 840px; height: 350px"></div>
+<div class="player" id="player" style="width: 840px; height: 100px"></div>
 
 <!--<div>
 <span>Date: DD/MM/YYYY</span><span>File: YYYY-MM-DD-HH-mm-ss-hh.mp3</span>
@@ -398,8 +398,8 @@ $(function() {
         <li class="ui-state-default" onClick="serviceChange(this, 'choice')">RTÉ Choice</li>
         <li class="ui-state-default" onClick="serviceChange(this, 'junior-chill')">RTÉ Junior-Chill</li>
         <li class="ui-state-default" onClick="serviceChange(this, '2xm')">RTÉ 2XM</li>
-        <li class="ui-state-default" onClick="serviceChange(this, 'rtepulse')">RTÉ Pulse</li>
-        <li class="ui-state-default" onClick="serviceChange(this, 'rteradio1extra')">RTÉ Radio 1 extra</li>
+        <li class="ui-state-default" onClick="serviceChange(this, 'pulse')">RTÉ Pulse</li>
+        <li class="ui-state-default" onClick="serviceChange(this, 'radio1extra')">RTÉ Radio 1 extra</li>
         <li class="ui-state-default" onClick="serviceChange(this, 'radio1lw')">RTÉ Radio 1 LW</li>
         <li class="ui-state-default" onClick="serviceChange(this, 'todayfm')">Today fm</li>
         <li class="ui-state-default" onClick="serviceChange(this, 'newstalk')">Newstalk</li>
