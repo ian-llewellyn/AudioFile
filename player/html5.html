@@ -1,0 +1,25 @@
+<html>
+<head>
+<title>HTML5 Audio oD Update</title>
+<script type="text/javascript">
+objAudio = new Image()
+
+function update() {
+  objAudio.src = "http://audiofile.rte.ie/audio/mp3/gold/2012-02-11/2012-02-11-23-00-00-01.mp3"
+}
+
+function skipnplay() {
+  player = document.getElementById('player')
+  player.currentTime = 2600
+  player.play()
+//  alert(player.duration)
+}
+</script>
+</head>
+<body>
+<audio id="player" src="http://audiofile.rte.ie/audio/mp3/gold/2012-02-11/2012-02-11-23-00-00-01.mp3" controls="controls" preload="auto" style="width: 700px">
+</audio><br />
+<input type="button" value="Update" onClick="update()" />
+<input type="button" value="Skip 'n' Play" onClick="skipnplay()" />
+</body>
+</html>
