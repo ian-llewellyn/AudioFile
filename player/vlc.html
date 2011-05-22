@@ -1,0 +1,22 @@
+<html>
+<head>
+<title>AudioFile Player - VLC</title>
+<script type="text/javascript">
+
+</script>
+</head>
+
+<body>
+<h1>AudioFile Player - VLC</h1>
+<embed type="application/x-vlc-plugin" pluginspage="http://www.videolan.org" version="VideoLAN.VLCPlugin.2"
+    width="640"
+    height="180"
+    id="vlc">
+</embed><br />
+<input type="button" onClick="vlc.playlist.play()" value="Play" />
+<script type="text/javascript">
+var vlc = document.getElementById("vlc");
+vlc.playlist.add('http://audiofile.rte.ie/audio/mp3/2fm/2012-01-15/2012-01-15-12-00-00-02.mp3');
+</script>
+</body>
+</html>
