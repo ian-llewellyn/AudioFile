@@ -8,12 +8,12 @@
           <Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
         </Transforms>
         <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-        <DigestValue>OtTiRvNonl2jBxn7U2Q558HXjpKLWxxXvX2/M7KfYVw=</DigestValue>
+        <DigestValue>8no/8Wfmn5xbo0t1ImRTSsnoOK2j2ro0cCyX6q4X1/s=</DigestValue>
       </Reference>
     </SignedInfo>
-    <SignatureValue Id="PackageSignatureValue">O4OaPX4rWUZo1JF8YfpQaBFm5JPHeFPQt4PF4neab4gffsuT3C52x7eCqITZJ0btFKe8cIf4Nnq2
-aRXvI8p43/L/9jLE+rn3xP8ndbuQUpcTLeleYBVNlgXvCTLL+UMl/6aUU8ZYHb+zsMXe49qDSACK
-ta9b0nXD+qH2roZTOdM=</SignatureValue>
+    <SignatureValue Id="PackageSignatureValue">WJf/dLBXb9k7OlfbwYkkSjgzOgDfcHikoohOlgrtXcldtrWCRgboNX4yBTn//fdvKcE+3LWuGAEn
+0jvoaN1ouCQOXlJFYuPhab36GHwZbsEO3z0Rp1oNnpq8NeFls1esCBzYPXYyqOpRhK/pWbcvHsKP
+VqzfTWM8YmY4kF+2MvU=</SignatureValue>
     <KeyInfo>
       <X509Data>
         <X509Certificate>MIICHzCCAYegAwIBAgIaMzFjYWU5MjU6MTJlMDlmYjMzNTM6LTgwMDAwDQYJKoZIhvcNAQEFBQAw
@@ -30,7 +30,7 @@ l/jHiQqEsmtYT4zPoXNuHVjoHUQ4rm2Q4eSzKqQNdG2PboiyGelvlZMX2RXV+Zb5SLXtXXyCsibi
     </KeyInfo>
     <Object>
       <Manifest Id="PackageContents">
-        <Reference URI="mimetype"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>0/oCb84THKMagtI0Dy0KogEu92TegdesqRr/clXct1c=</DigestValue></Reference><Reference URI="META-INF/AIR/application.xml"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>40EFeMgihCAosube5Z/w+bpxNVkgShxIVJXj/wUPLsk=</DigestValue></Reference><Reference URI="ClipperAsAir.swf"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>O874Z/606Ipbgsolr0QGNbMlZzFBTazRJExG0lSN4/Y=</DigestValue></Reference><Reference URI="config.xml"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>r+YxRrF/OX5rWu2h6SxmhaNetxUFvnjGYWNEb636Oys=</DigestValue></Reference><Reference URI="logos/128x128.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>V36+zph5ysOgtD7fmcFypDxu02aRy0KTO9jrEJXzWEU=</DigestValue></Reference><Reference URI="logos/16x16.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>/F6ujSV+a+wz4HsP46dQiAQIYm8tzsktFG2Hbf2G9xA=</DigestValue></Reference><Reference URI="logos/32x32.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>YIGq1O9o5k92uQBqJx5/pp3Qm4EHpafuJYEW15Z3nxU=</DigestValue></Reference><Reference URI="logos/48x48.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>pOndlj09mNcCDwdPGrD/bp30BqSuxRKDYdZwQHbSRtM=</DigestValue></Reference><Reference URI="logos/64x64.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>Pb0Xa9kOaJ8YXxvPWB8ulb5qmtn/1nVNlZTiuhykyeE=</DigestValue></Reference><Reference URI="logos/Thumbs.db"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>+GXUnjbJWLaIx4xyE8OoGEXlJ65SnXFOpi9NUTWUSuI=</DigestValue></Reference>
+        <Reference URI="mimetype"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>0/oCb84THKMagtI0Dy0KogEu92TegdesqRr/clXct1c=</DigestValue></Reference><Reference URI="META-INF/AIR/application.xml"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>40EFeMgihCAosube5Z/w+bpxNVkgShxIVJXj/wUPLsk=</DigestValue></Reference><Reference URI="ClipperAsAir.swf"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>dnveLe5kjy8G3jKiUWY6JZizlg7dI3PGRzL5+cv1tuI=</DigestValue></Reference><Reference URI="config.xml"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>r+YxRrF/OX5rWu2h6SxmhaNetxUFvnjGYWNEb636Oys=</DigestValue></Reference><Reference URI="logos/128x128.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>V36+zph5ysOgtD7fmcFypDxu02aRy0KTO9jrEJXzWEU=</DigestValue></Reference><Reference URI="logos/16x16.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>/F6ujSV+a+wz4HsP46dQiAQIYm8tzsktFG2Hbf2G9xA=</DigestValue></Reference><Reference URI="logos/32x32.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>YIGq1O9o5k92uQBqJx5/pp3Qm4EHpafuJYEW15Z3nxU=</DigestValue></Reference><Reference URI="logos/48x48.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>pOndlj09mNcCDwdPGrD/bp30BqSuxRKDYdZwQHbSRtM=</DigestValue></Reference><Reference URI="logos/64x64.png"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>Pb0Xa9kOaJ8YXxvPWB8ulb5qmtn/1nVNlZTiuhykyeE=</DigestValue></Reference><Reference URI="logos/Thumbs.db"><DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"></DigestMethod><DigestValue>+GXUnjbJWLaIx4xyE8OoGEXlJ65SnXFOpi9NUTWUSuI=</DigestValue></Reference>
       </Manifest>
     </Object>
     
