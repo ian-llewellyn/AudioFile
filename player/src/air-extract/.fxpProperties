@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<fxpProperties abbreviated="false" authoringTool="Flex Builder" compiles="true" parentProject="31d804b0-cafd-40fd-9e01-1b0f47601b58" projectUUID="31d804b0-cafd-40fd-9e01-1b0f47601b58" sdkVersion="4.0.0" uuid="c46e0205-6f08-46ce-8a12-09683c08f392" version="4">
+  <projects/>
+  <src/>
+  <swc>
+    <linked location="sdkPlaceHolder" path="sdkPlaceHolder" position="0" uuid="c46e0205-6f08-46ce-8a12-09683c08f392"/>
+    <linked location="C:/ToolsForIanLlewellyn/ClipperAsAir/libs" path="/libs" position="1" uuid="c46e0205-6f08-46ce-8a12-09683c08f392"/>
+  </swc>
+  <misc/>
+  <theme/>
+</fxpProperties>

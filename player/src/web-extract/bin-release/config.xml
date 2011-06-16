@@ -1,0 +1,8 @@
+<configs>
+	<serviceUrl>http://audiofile.rte.ie/webservice/v2/</serviceUrl>
+	<serviceService>listservices.php</serviceService>
+	<fileService>listfiles.php</fileService>
+	<downloadService>download.php</downloadService>
+	<audioFile>http://audiofile.rte.ie/audio/</audioFile>
+	<playFormat>mp3</playFormat>
+</configs>
