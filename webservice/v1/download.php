@@ -16,7 +16,7 @@ date_default_timezone_set('UTC');
 // 3 - operations
 // 4 - operations incl. repeated ones
 // 5 - lots of info
-$log_level = 2;
+$log_level = 3;
 
 // Logging function
 function log_message($msg_level, $msg, $bare_log = false) {
@@ -62,6 +62,9 @@ preg_match('/^((\d{4})-(\d{2})-(\d{2}))[ -]((\d{2})[:-](\d{2})[:-](\d{2})[.-](\d
 list(, $end_date, $end_yr, $end_mo, $end_dy, $end_time, $end_hr, $end_mi, $end_se, $end_hs) = $matches;
 log_message(4, 'End date: ' . $end_date . ', time: ' . $end_time);
 
+// Title for the downloaded clip
+$file_title = isset($_GET['file_title']) ? $_GET['file_title'] : ( isset($_POST['file_title']) ? $_POST['file_title'] : 'output' );
+
 // Before doing anything else, is the request for anything over 24 hours?
 if ( get_time_diff($request_start, $request_end) > 86400 ) {
 	log_message(1, 'Request for audio file larger than 24 hours - die()ing');
@@ -97,14 +100,17 @@ function get_filename_for_date_time($date_time, $is_end = false) {
 	preg_match('/^((\d{4})-(\d{2})-(\d{2}))[ -]((\d{2})[:-](\d{2})[:-](\d{2})[.-](\d{2}))$/', $date_time, $matches);
 	list(, $date, $yr, $mo, $dy, $time, $hr, $mi, $se, $hs) = $matches;
 
-	// Get date_time - 1 day
-	$day_before_date_time = strftime("%Y-%m-%d", gmmktime(0, 0, 0, $mo, $dy-1, $yr));
-
 	// List the directory for date_time
 	$dir_listing = scandir($rotter_base_dir . $service . '/' . $date);
 
-	// Add yesterday's directory listing too
-	$dir_listing = array_merge($dir_listing, scandir($rotter_base_dir . $service . '/' . $day_before_date_time));
+	// Get date_time - 1 day
+	$day_before_date_time = strftime("%Y-%m-%d", gmmktime(0, 0, 0, $mo, $dy-1, $yr));
+
+	// Get yesterday's directory listing if it exists
+	$yday_dir_listing = scandir($rotter_base_dir . $service . '/' . $day_before_date_time);
+
+	// Add yesterday's directory listing too if it exists
+	if ( $yday_dir_listing !== false ) $dir_listing = array_merge($dir_listing, $yday_dir_listing);
 
 	// Clear out any unwanted files ('.idx', '.', '..', etc.)
 	$dir_listing = array_filter($dir_listing, "dir_listing_filter");
@@ -261,14 +267,40 @@ set_time_limit(0);
 log_message(2, 'Executing: ' . $cmd);
 exec($cmd, $mpgedit_op, $ret_val);
 
+function readfile_chunked($filename, $retbytes=true) {
+	$chunksize = 1*(1024*1024); // how many bytes per chunk
+	$buffer = '';
+	$cnt =0;
+	// $handle = fopen($filename, 'rb');
+	$handle = fopen($filename, 'rb');
+	if ($handle === false) {
+		return false;
+	}
+	while (!feof($handle)) {
+		$buffer = fread($handle, $chunksize);
+		echo $buffer;
+		ob_flush();
+		flush();
+		if ($retbytes) {
+			$cnt += strlen($buffer);
+		}
+	}
+	$status = fclose($handle);
+	if ($retbytes && $status) {
+		return $cnt; // return num. bytes delivered like readfile() does.
+	}
+	return $status;
+
+}
+
 if ($ret_val == 0) {
 	log_message(5, "$mpgedit output:\n" . $mpgedit_op);
 	//header('Expires: ' . gmdate('D, d M Y H:i:s e'));
 	header('Content-Type: audio/mpeg');
-	header('Content-Disposition: attachment; filename=output' . $recording_suffix);
+	header('Content-Disposition: attachment; filename=' . $file_title . $recording_suffix);
 	header('Content-Length: ' . filesize($temp_file));
-	log_message(3, 'About to readfile()');
-	readfile($temp_file);
+	log_message(3, 'About to readfile_chunked()');
+	readfile_chunked($temp_file);
 	exit;
 } else {
 	log_message(1, $mpgedit . ' error: return code: ' . $ret_val);
