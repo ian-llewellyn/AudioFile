@@ -1,0 +1,7 @@
+/var/log/rotter/*.log {
+    missingok
+    weekly
+    rotate 4
+    create
+    notifempty
+}
