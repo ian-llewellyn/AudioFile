@@ -16,7 +16,7 @@ date_default_timezone_set('UTC');
 // 3 - operations
 // 4 - operations incl. repeated ones
 // 5 - lots of info
-$log_level = 3;
+$log_level = 4;
 
 // Logging function
 function log_message($msg_level, $msg, $bare_log = false) {
@@ -61,9 +61,6 @@ $request_end = isset($_GET['end']) ? $_GET['end'] : ( isset($_POST['end']) ? $_P
 preg_match('/^((\d{4})-(\d{2})-(\d{2}))[ -]((\d{2})[:-](\d{2})[:-](\d{2})[.-](\d{2}))$/', $request_end, $matches);
 list(, $end_date, $end_yr, $end_mo, $end_dy, $end_time, $end_hr, $end_mi, $end_se, $end_hs) = $matches;
 log_message(4, 'End date: ' . $end_date . ', time: ' . $end_time);
-
-// Title for the downloaded clip
-$file_title = isset($_GET['file_title']) ? $_GET['file_title'] : ( isset($_POST['file_title']) ? $_POST['file_title'] : 'output' );
 
 // Before doing anything else, is the request for anything over 24 hours?
 if ( get_time_diff($request_start, $request_end) > 86400 ) {
@@ -297,7 +294,7 @@ if ($ret_val == 0) {
 	log_message(5, "$mpgedit output:\n" . $mpgedit_op);
 	//header('Expires: ' . gmdate('D, d M Y H:i:s e'));
 	header('Content-Type: audio/mpeg');
-	header('Content-Disposition: attachment; filename=' . $file_title . $recording_suffix);
+	header('Content-Disposition: attachment; filename=output' . $recording_suffix);
 	header('Content-Length: ' . filesize($temp_file));
 	log_message(3, 'About to readfile_chunked()');
 	readfile_chunked($temp_file);
