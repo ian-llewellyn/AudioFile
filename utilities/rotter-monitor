@@ -1,0 +1,8 @@
+#!/bin/bash
+
+watch -d -n 2 'ps -o pid,thcount,%cpu,%mem,start,time,command -p $(pgrep -f "^/usr/bin/jackd|^/usr/local/bin/rotter") 2> /dev/null
+echo
+echo "==> Disk Usage <=="
+du -s /var/rotter/mp*/* 2> /dev/null
+echo
+tail -n 1 /var/log/jackd.log /var/log/rotter/*.log 2> /dev/null'
