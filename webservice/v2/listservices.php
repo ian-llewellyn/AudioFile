@@ -68,7 +68,7 @@ if ( $callback !== false ) {
 		},
 		{
 			"title":"Test",
-			"id":"radio1test"
+			"id":"r1new"
 		}
 	]
 }<?php
