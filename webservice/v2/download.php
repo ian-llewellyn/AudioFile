@@ -66,9 +66,15 @@ log_message(4, 'End date: ' . $end_date . ', time: ' . $end_time);
 $file_title = isset($_GET['file_title']) ? $_GET['file_title'] : ( isset($_POST['file_title']) ? $_POST['file_title'] : 'output' );
 
 // Before doing anything else, is the request for anything over 24 hours?
-if ( get_time_diff($request_start, $request_end) > 86400 ) {
+$time_diff = get_time_diff($request_start, $request_end);
+if ( $time_diff > 86400 ) {
 	log_message(1, 'Request for audio file larger than 24 hours - die()ing');
+	header('HTTP/1.0 400 Bad Request');
 	die('You cannot request audio longer than 24 hours long - That would be ridiculous.');
+} elseif ( $time_diff < 1 ) {
+	log_message(1, 'Start and End times are swapped - die()ing');
+	header('HTTP/1.0 400 Bad Request');
+	die('You cannot end before you start - are start and end parameters swapped?');
 }
 
 /**
@@ -106,11 +112,14 @@ function get_filename_for_date_time($date_time, $is_end = false) {
 	// Get date_time - 1 day
 	$day_before_date_time = strftime("%Y-%m-%d", gmmktime(0, 0, 0, $mo, $dy-1, $yr));
 
-	// Get yesterday's directory listing if it exists
-	$yday_dir_listing = scandir($rotter_base_dir . $service . '/' . $day_before_date_time);
+	// Is there a directory for yesterday?
+	if ( is_dir($rotter_base_dir . $service . '/' . $day_before_date_time) ) {
+		// Get yesterday's directory listing if it exists
+		$yday_dir_listing = scandir($rotter_base_dir . $service . '/' . $day_before_date_time);
 
-	// Add yesterday's directory listing too if it exists
-	if ( $yday_dir_listing !== false ) $dir_listing = array_merge($dir_listing, $yday_dir_listing);
+		// Add yesterday's directory listing too if it exists
+		if ( $yday_dir_listing !== false ) $dir_listing = array_merge($dir_listing, $yday_dir_listing);
+	}
 
 	// Clear out any unwanted files ('.idx', '.', '..', etc.)
 	$dir_listing = array_filter($dir_listing, "dir_listing_filter");
@@ -295,6 +304,11 @@ function readfile_chunked($filename, $retbytes=true) {
 
 if ($ret_val == 0) {
 	log_message(5, "$mpgedit output:\n" . $mpgedit_op);
+	if ( !is_file($temp_file) ) {
+		header('HTTP/1.0 500 Internal Server Error');
+		log_message(0, 'About to readfile_chunked()');
+		die('There is no file to stream to the client');
+	}
 	//header('Expires: ' . gmdate('D, d M Y H:i:s e'));
 	header('Content-Type: audio/mpeg');
 	header('Content-Disposition: attachment; filename=' . $file_title . $recording_suffix);
