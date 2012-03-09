@@ -16,7 +16,7 @@ date_default_timezone_set('UTC');
 // 3 - operations
 // 4 - operations incl. repeated ones
 // 5 - lots of info
-$log_level = 3;
+$log_level = 5;
 
 // Logging function
 function log_message($msg_level, $msg, $bare_log = false) {
@@ -24,24 +24,24 @@ function log_message($msg_level, $msg, $bare_log = false) {
 
 	// Should this go any further
 	if ($log_level < $msg_level) return true;
-        // open file
-        $fd = fopen(dirname($_SERVER['SCRIPT_FILENAME']) . '/download.log', 'a');
+	// open file
+	$fd = fopen(dirname($_SERVER['SCRIPT_FILENAME']) . '/new-download.log', 'a');
 	if (!$fd) return false;
-        // append date/time to message
-        $str = ($bare_log === false ? '[' . date('Y/m/d H:i:s', mktime()) . '] ' . $_SERVER['REMOTE_ADDR'] . ' [' . $msg_level . '] ' : '') . $msg;
-        // write string
-        if (fwrite($fd, $str . "\n") === false) return false;
-        // close file
-        fclose($fd);
+	// append date/time to message
+	$str = ($bare_log === false ? '[' . date('Y/m/d H:i:s', mktime()) . '] ' . $_SERVER['REMOTE_ADDR'] . ' [' . $msg_level . '] ' : '') . $msg;
+	// write string
+	if (fwrite($fd, $str . "\n") === false) return false;
+	// close file
+	fclose($fd);
 	return true;
 }
 
 // Include Common configuration parameters
 require_once('common-config.php');
 
-// Mpgedit binary
-$mpgedit = '/usr/local/bin/mpgedit_nocurses';
-//$mpgedit = '/bin/echo';
+// Mpgsplice binary
+$mpgsplice = '/usr/local/bin/mpgsplice';
+//$mpgsplice = '/bin/echo';
 
 // Arguments we want to get and any defaults we want to set
 // Service
@@ -72,7 +72,7 @@ if ( $time_diff > 86400 ) {
 	header('HTTP/1.0 400 Bad Request');
 	die('You cannot request audio longer than 24 hours long - That would be ridiculous.');
 } elseif ( $time_diff < 1 ) {
-	log_message(1, 'Start and End times are swapped - die()ing');
+	log_message(1, 'Start and End times are likely swapped - die()ing');
 	header('HTTP/1.0 400 Bad Request');
 	die('You cannot end before you start - are start and end parameters swapped?');
 }
@@ -142,6 +142,8 @@ function get_filename_for_date_time($date_time, $is_end = false) {
 	return $file;
 }
 
+/* Find any files recorded between the end of file_a and the start of file_y
+ */
 function get_intermediate_files($file_a, $file_y) {
 	global $rotter_base_dir, $service, $recording_suffix;
 	log_message(4, 'get_intermediate_files($file_a = \'' . $file_a . '\', $file_b = \'' . $file_y . '\')');
@@ -213,12 +215,24 @@ function get_time_diff($date_time1, $date_time2) {
 
 // Get the file that contains the start
 $file_a = get_filename_for_date_time($request_start);
+if ($file_a === NULL) {
+	log_message(1, 'No audio file was found for start time: ' . $request_start . ' - die()ing');
+	header('HTTP/1.0 404 File not found');
+	header('Content-Type: text/plain');
+	die('No audio file was found for start time: ' . $request_start);
+}
 
 // How far in is the start we want
 $offset_start = get_time_diff(str_replace($recording_suffix, '', $file_a), $request_start);
 
 // Get the file that contains the end
 $file_y = get_filename_for_date_time($request_end, true);
+if ($file_y === NULL) {
+	log_message(1, 'No audio file was found for end time: ' . $request_start . ' - die()ing');
+	header('HTTP/1.0 404 File not found');
+	header('Content-Type: text/plain');
+	die('No audio file was found for end time: ' . $request_start);
+}
 
 // How far in is the end we want
 $offset_end = get_time_diff(str_replace($recording_suffix, '', $file_y), $request_end);
@@ -226,62 +240,37 @@ $offset_end = get_time_diff(str_replace($recording_suffix, '', $file_y), $reques
 // Get any "in between" files
 $files = $file_a != $file_y ? get_intermediate_files($file_a, $file_y) : array();
 
-// Prepare a temp file
-$temp_file = tempnam('/tmp/', 'mpgedit_op_');
-// Check for faillure
-if ($temp_file === FALSE) {
-	log_message(1, 'Failed to create temporary file');
-	die('Failed to create temporary file!');
-}
-// mpgedit doesn't like overwriting files, so...
-unlink($temp_file);
-log_message(3, 'File: ' . $temp_file . ' allocated for audio data');
-
-// This needs to run when the script is finnishing
-function tidy_up_func($temp_file) {
-	// This message never gets logged
-	log_message(3, 'Deleting file: ' . $temp_file);
-	// Remove the file
-	if ( file_exists($temp_file) ) unlink($temp_file);
-}
-register_shutdown_function('tidy_up_func', $temp_file);
-
 // Build the command line we'll use
-$cmd = "$mpgedit -o $temp_file -e $offset_start-";
+$cmd = "$mpgsplice -";
 log_message(4, 'Command line: ' . $cmd);
 
+$edit_list = "$rotter_base_dir$service/$start_date/$file_a $offset_start";
+log_message(4, "Edit list: $rotter_base_dir$service/$start_date/$file_a $offset_start", true);
 if ( $file_a != $file_y ) {
 	// Start and end are in different files
-	$cmd .= " -f $rotter_base_dir$service/$start_date/$file_a";
-	log_message(4, "\t:  -f $rotter_base_dir$service/$start_date/$file_a", true);
+	// Process Intermediate files
 	foreach ( $files as $file ) {
-		// For every intermediary file, we can just append the whole thing
+		// For every intermediate file, we can just append the whole thing
 		preg_match('/^\d{4}-\d{2}-\d{2}/', $file, $matches);
 		$file_date = $matches[0];
-		$cmd .= " -e - -f $rotter_base_dir$service/$file_date/$file";
-		log_message(4, "\t:  -e - -f $rotter_base_dir$service/$file_date/$file", true);
+		$edit_list .= "\n$rotter_base_dir$service/$file_date/$file";
+		log_message(4, "Edit list: $rotter_base_dir$service/$file_date/$file", true);
 	}
+
 	// Because the end is in a different file to the beginning, we must restart it's editspec
-	$cmd .= " -e -";
-	log_message(4, "\t:  -e -", true);
+	$edit_list .= "\n$rotter_base_dir$service/$end_date/$file_y 0";
+	log_message(4, "Edit list: $rotter_base_dir$service/$end_date/$file_y 0", true);
 }
-$cmd .= "$offset_end -f $rotter_base_dir$service/$end_date/$file_y";
-log_message(4, "\t: $offset_end -f $rotter_base_dir$service/$end_date/$file_y", true);
-
-// Not sure if these are actually needed - seemed to be working ok without
-ini_set('memory_limit', '-1');
-set_time_limit(0);
-
-// Run the mpgedit application (timespecs can be in [mm:]ss[.hh] format)
-log_message(2, 'Executing: ' . $cmd);
-exec($cmd, $mpgedit_op, $ret_val);
+$edit_list .= " $offset_end";
+log_message(4, "\t:  $offset_end", true);
 
 function readfile_chunked($filename, $retbytes=true) {
-	$chunksize = 1*(1024*1024); // how many bytes per chunk
+	$chunksize = 0.25*(1024*1024); // how many bytes per chunk
 	$buffer = '';
-	$cnt =0;
+	$cnt = 0;
 	// $handle = fopen($filename, 'rb');
-	$handle = fopen($filename, 'rb');
+//	$handle = fopen($filename, 'rb');
+$handle = $filename;
 	if ($handle === false) {
 		return false;
 	}
@@ -294,7 +283,8 @@ function readfile_chunked($filename, $retbytes=true) {
 			$cnt += strlen($buffer);
 		}
 	}
-	$status = fclose($handle);
+//	$status = fclose($handle);
+$status = true;
 	if ($retbytes && $status) {
 		return $cnt; // return num. bytes delivered like readfile() does.
 	}
@@ -302,25 +292,61 @@ function readfile_chunked($filename, $retbytes=true) {
 
 }
 
-if ($ret_val == 0) {
-	log_message(5, "$mpgedit output:\n" . $mpgedit_op);
-	if ( !is_file($temp_file) ) {
-		header('HTTP/1.0 500 Internal Server Error');
-		log_message(0, 'About to readfile_chunked()');
-		die('There is no file to stream to the client');
-	}
-	//header('Expires: ' . gmdate('D, d M Y H:i:s e'));
-	header('Content-Type: audio/mpeg');
-	header('Content-Disposition: attachment; filename=' . $file_title . $recording_suffix);
-	header('Content-Length: ' . filesize($temp_file));
-	log_message(3, 'About to readfile_chunked()');
-	readfile_chunked($temp_file);
-	exit;
-} else {
-	log_message(1, $mpgedit . ' error: return code: ' . $ret_val);
-	log_message(4, $mpgedit_op);
-	echo 'There was a problem creating the audio file.';
-	exit;
+// Not sure if these are actually needed - seemed to be working ok without
+ini_set('memory_limit', '-1');
+set_time_limit(0);
+
+// Run the mpgsplice application (timespecs can be in ss[.hh] format)
+//////////////////////////////////////////////////////////////////////////////
+$descriptorspec = array(
+   0 => array("pipe", "r"),	// stdin is a pipe that the child will read from
+   1 => array("pipe", "w"),	// stdout is a pipe that the child will write to
+   2 => array("pipe", "w")	// stderr is a pipe that the child will write to
+//   2 => array("file", "/tmp/error-output.txt", "a")	// stderr is a file to write to
+);
+
+$cwd = '/tmp';
+$env = array('some_option' => 'aeiou');
+
+log_message(2, 'Executing: ' . $cmd);
+$process = proc_open($cmd, $descriptorspec, $pipes, $cwd, $env);
+
+if ( !is_resource($process) ) die('proc_open() failed');
+
+// $pipes now looks like this:
+// 0 => writeable handle connected to child stdin
+// 1 => readable handle connected to child stdout
+// Any error output will be appended to /tmp/error-output.txt
+
+fwrite($pipes[0], $edit_list);
+fclose($pipes[0]);
+
+// HTTP Headers
+header('Content-Type: audio/mpeg');
+header('Content-Disposition: attachment; filename=' . $file_title . $recording_suffix);
+header('Transfer-coding: chunked');
+log_message(3, 'About to readfile_chunked()');
+readfile_chunked($pipes[1]);
+
+//echo stream_get_contents($pipes[1]);
+fclose($pipes[1]);
+
+$stderr = stream_get_contents($pipes[2]);
+fclose($pipes[2]);
+
+// It is important that you close any pipes before calling
+// proc_close in order to avoid a deadlock
+$return_value = proc_close($process);
+
+//echo "command returned $return_value\n";
+//////////////////////////////////////////////////////////////////////////////
+
+if ($return_value != 0) {
+	log_message(1, 'mpgsplice returned non-zero - here comes stderr:');
+	log_message(1, $stderr, true);
+	die('mpgsplice returned non-zero');
 }
+
+log_message(1, $stderr, true);
 
 ?>
