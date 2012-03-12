@@ -16,7 +16,7 @@ date_default_timezone_set('UTC');
 // 3 - operations
 // 4 - operations incl. repeated ones
 // 5 - lots of info
-$log_level = 5;
+$log_level = 2;
 
 // Logging function
 function log_message($msg_level, $msg, $bare_log = false) {
@@ -25,7 +25,7 @@ function log_message($msg_level, $msg, $bare_log = false) {
 	// Should this go any further
 	if ($log_level < $msg_level) return true;
 	// open file
-	$fd = fopen(dirname($_SERVER['SCRIPT_FILENAME']) . '/new-download.log', 'a');
+	$fd = fopen(dirname($_SERVER['SCRIPT_FILENAME']) . '/download.log', 'a');
 	if (!$fd) return false;
 	// append date/time to message
 	$str = ($bare_log === false ? '[' . date('Y/m/d H:i:s', mktime()) . '] ' . $_SERVER['REMOTE_ADDR'] . ' [' . $msg_level . '] ' : '') . $msg;
@@ -302,7 +302,6 @@ $descriptorspec = array(
    0 => array("pipe", "r"),	// stdin is a pipe that the child will read from
    1 => array("pipe", "w"),	// stdout is a pipe that the child will write to
    2 => array("pipe", "w")	// stderr is a pipe that the child will write to
-//   2 => array("file", "/tmp/error-output.txt", "a")	// stderr is a file to write to
 );
 
 $cwd = '/tmp';
@@ -345,8 +344,8 @@ if ($return_value != 0) {
 	log_message(1, 'mpgsplice returned non-zero - here comes stderr:');
 	log_message(1, $stderr, true);
 	die('mpgsplice returned non-zero');
+} else {
+	log_message(3, $stderr, true);
 }
-
-log_message(1, $stderr, true);
 
 ?>
