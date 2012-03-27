@@ -28,7 +28,7 @@ function log_message($msg_level, $msg, $bare_log = false) {
 	$fd = fopen(dirname($_SERVER['SCRIPT_FILENAME']) . '/download.log', 'a');
 	if (!$fd) return false;
 	// append date/time to message
-	$str = ($bare_log === false ? '[' . date('Y/m/d H:i:s', mktime()) . '] ' . $_SERVER['REMOTE_ADDR'] . ' [' . $msg_level . '] ' : '') . $msg;
+	$str = ($bare_log === false ? '[' . date('Y/m/d H:i:s T', mktime()) . '] ' . $_SERVER['REMOTE_ADDR'] . ' [' . $msg_level . '] ' : '') . $msg;
 	// write string
 	if (fwrite($fd, $str . "\n") === false) return false;
 	// close file
@@ -265,12 +265,13 @@ $edit_list .= " $offset_end";
 log_message(4, "\t:  $offset_end", true);
 
 function readfile_chunked($filename, $retbytes=true) {
-	$chunksize = 0.25*(1024*1024); // how many bytes per chunk
+	// $chunksize = 0.25*(1024*1024); // how many bytes per chunk
+	$chunksize = 1024; // how many bytes per chunk
+	//$chunksize = 0.25*(1024*1024);
 	$buffer = '';
 	$cnt = 0;
 	// $handle = fopen($filename, 'rb');
-//	$handle = fopen($filename, 'rb');
-$handle = $filename;
+	$handle = $filename;
 	if ($handle === false) {
 		return false;
 	}
@@ -283,13 +284,12 @@ $handle = $filename;
 			$cnt += strlen($buffer);
 		}
 	}
-//	$status = fclose($handle);
-$status = true;
+	// $status = fclose($handle);
+	$status = true;
 	if ($retbytes && $status) {
 		return $cnt; // return num. bytes delivered like readfile() does.
 	}
 	return $status;
-
 }
 
 // Not sure if these are actually needed - seemed to be working ok without
