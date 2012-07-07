@@ -65,10 +65,6 @@ if ( $callback !== false ) {
 		{
 			"title":"4fm",
 			"id":"4fm"
-		},
-		{
-			"title":"Test",
-			"id":"r1new"
 		}
 	]
 }<?php
