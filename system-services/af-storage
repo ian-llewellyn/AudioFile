@@ -1,0 +1,156 @@
+#!/bin/bash
+#
+# af-storage	Bring AudioFile Storage online
+#
+# chkconfig: 345 30 70
+# description: Brings storage associated with the AudioFile Central Server \
+#              online at boot time provided no one else owns it.
+#
+
+# Source function library.
+. /etc/init.d/functions
+
+#set -e
+#set -x	# DEBUG
+
+# How to call this script
+usage() {
+	echo "$0 <start|stop|forcestart|status>"
+	return 0
+}
+
+# Are we already the owner / Can we own it?
+vg_owner() {
+	local this_host=$(uname -n)
+	local vg_tags=$(vgs --noheadings -o tags vg_audiofile)
+
+	if [ -z $vg_tags ] ; then
+		# No owner
+		#echo "No owner for VG: vg_audiofile"
+		return 0
+	fi
+
+	if [ $vg_tags == $this_host ] ; then
+		# This host is the owner
+		#echo "This host owns VG: vg_audiofile"
+		return 0
+	else
+		# Another host is the owner
+		#echo "Another host owns VG: vg_audiofile"
+		return 1
+	fi
+}
+
+start() {
+	RETVAL=0
+	if ! vg_owner ; then
+		if [ "$force" != "force" ] ; then
+			return 1
+		fi
+		echo "Force necessary"
+	fi
+
+	# Remove all tags
+	for tag in $(vgs --noheadings -o tags vg_audiofile | sed "s/,/ /g") ; do
+		vgchange --deltag $tag vg_audiofile > /dev/null
+	done
+
+	# Add this host's tag
+	vgchange --addtag $(uname -n) vg_audiofile > /dev/null
+
+	# Activate LVs
+	vgchange -ay vg_audiofile > /dev/null || RETVAL=1
+
+	if [ ! -e /dev/vg_audiofile/lv_daycache ] ; then
+		return 1
+	fi
+
+	# Mount the filesystem
+	mount /dev/vg_audiofile/lv_daycache /mnt/audiofile-day-cache || RETVAL=1
+	mount /mnt/x9k-audiofile || RETVAL=1
+	mount /mnt/x9k-audiofile_dyn_arch || RETVAL=1
+
+	return $RETVAL
+}
+
+stop() {
+	RETVAL=0
+
+	if mountpoint /mnt/audiofile-day-cache &> /dev/null ; then
+		umount /mnt/audiofile-day-cache || RETVAL=1
+	fi
+	if mountpoint /mnt/x9k-audiofile &> /dev/null ; then
+		umount /mnt/x9k-audiofile || RETVAL=1
+	fi
+	if mountpoint /mnt/x9k-audiofile_dyn_arch &> /dev/null ; then
+		umount /mnt/x9k-audiofile_dyn_arch || RETVAL=1
+	fi
+
+	vgchange -an vg_audiofile > /dev/null || RETVAL=1
+
+	vgchange --deltag $(uname -n) vg_audiofile > /dev/null || RETVAL=1
+
+	return $RETVAL
+}
+
+status() {
+	RETVAL=0
+	mountpoint /mnt/audiofile-day-cache || RETVAL=1
+	mountpoint /mnt/x9k-audiofile || RETVAL=1
+	mountpoint /mnt/x9k-audiofile_dyn_arch || RETVAL=1
+
+	return $RETVAL
+}
+
+case "$1" in
+start)
+	echo -n "Starting AudioFile Storage: "
+	start || status
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ] ; then
+		touch /var/lock/subsys/af-storage
+	fi
+	;;
+forcestart)
+	echo -n "Starting AudioFile Storage: "
+	force=force
+	start || status
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ] ; then
+		touch /var/lock/subsys/af-storage
+	fi
+	;;
+stop)
+	echo -n "Stopping AudioFile Storage: "
+	stop
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ] ; then
+		rm /var/lock/subsys/af-storage
+	fi
+	;;
+restart)
+	echo -n "Restarting AudioFile Storage: "
+	stop
+	start
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ] ; then
+		touch /var/lock/subsys/af-storage
+	fi
+	;;
+status)
+	status
+	RETVAL=$?
+	;;
+*)
+	usage
+	exit 1
+	;;
+esac
+
+if [ $RETVAL -eq 0 ] ; then
+	success
+else
+	failure
+fi
+echo
+exit $RETVAL
