@@ -1,0 +1,212 @@
+#!/bin/bash
+set -e
+
+## Global Variables
+AUDIOFILE_DAY_CACHE_STORAGE=/mnt/audiofile-day-cache/audio
+AUDIOFILE_ROLLING_STORAGE=/mnt/audiofile-legal/audio
+AUDIOFILE_ARCHIVE_STORAGE=/mnt/audiofile-archive/audio
+ROTTER_BASE=/var/rotter
+
+
+## Set Defaults
+unset HOSTNAME	# This is usually an environment variable
+FORMATS="mp2 mp3"
+SERVICES="*" # We want all the services in each format!
+DATES="$(date +%Y-%m-%d)"	# Today (YYYY-MM-DD)
+if [ $(date +%H%M) -lt 0200 ] ; then	# DATES=Yesterday too if before 2am.
+	DATES="$(date -d '1 days ago' +%Y-%m-%d) $DATES"
+fi
+#KEEP_DAYS=186
+
+
+## Local Variables
+LOGFILE=/var/log/audiofile/rotter-sync.log
+
+
+## Global Function Definitions
+# logger - logs (and prints if verbose) the message
+logger() {
+	if [ -n "$VERBOSE" ] ; then
+		echo "$1"
+	fi
+	echo "[$$]: $1" >> $LOGFILE
+}
+
+# pipe_logger - logs (and prints if verbose) the mesages on stdin
+pipe_logger() {
+	while read line ; do
+		if [ -n "$VERBOSE" ] ; then
+			echo "$line"
+		fi
+		echo "[$$]: $line" >> $LOGFILE
+	done
+}
+
+
+## Local Function Definitions
+# usage
+usage() {
+	echo "Usage: $0 [-v] [-n] <-h hostname> [-f format] [-s service] [-d date]" >&2
+	echo -e "\t-v - verbose" >&2
+	echo -e "\t-n - no operation (dry-run)" >&2
+	echo -e "\t-h - No Default!" >&2
+	echo -e "\t-f - Default: \"mp2 mp3\"" >&2
+	echo -e "\t-s - Default: \"*\"" >&2
+	echo -e "\t-d - Default: Today (+ yesterday before 2am)" >&2
+	return 0
+}
+
+# get_service - gets a list of services for $format on given $hostname
+get_services() {
+	ssh -T $HOSTNAME <<-EOF
+	service_container_dir=\$(ls $ROTTER_BASE/$format/)
+	if [ \$? -ne 0 ] ; then return 1 ; fi
+	for dir in \$service_container_dir ; do
+		if [ "\$dir" == "lost+found" ] ; then
+			# We found lost+found
+			logger "Not a service directory: \$dir - continuing" >&2
+			continue	# Next service candidate
+		elif [ ! -d "$ROTTER_BASE/$format/$dir" ] ; then
+			logger "Not a service directory: \$dir - continuing" >&2
+			continue
+		fi
+
+		echo \$dir
+	done
+	EOF
+	return
+}
+
+# integer_test - returns 0 if it's passed an integer, 1 otherwise
+integer_test() {
+	test $1 -eq 0 &> /dev/null
+	local ret=$?
+	if [ $ret -eq 0 -o $ret -eq 1 ] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+# PID / Lockfile
+ARGS="$@"
+pid_lock() {
+	# Is there already a process running with the same parameters?
+	oldest_pid=$(pgrep -fo "$0 $ARGS")
+	if [ $$ -ne $oldest_pid -a $PPID -ne $oldest_pid ]; then
+		logger "There is an unfinished sync instance with these parameters already"
+		logger "This PID: [$$] PPID: [$PPID] Detected PID: [$oldest_pid]"
+		ps -wwo pid,ppid,user,%cpu,time,command -p $$,$oldest_pid | pipe_logger
+		return 1
+	fi
+}
+
+
+## Parse Command Line Arguments
+while [ $# -ne 0 ] ; do
+	OPTION="$1"
+	OPTARG="$2"
+	case $OPTION in
+	-h)
+		# Hostname
+		HOSTNAME=$OPTARG
+		shift
+		;;
+	-f)
+		# Formats
+		FORMATS=$OPTARG
+		shift
+		;;
+	-s)
+		# Services
+		SERVICES=$OPTARG
+		shift
+		;;
+	-d)
+		# Dates
+		DATES=$OPTARG
+		shift
+		;;
+	-n)
+		# No opeartion
+		NO_OP=no_op
+		;;
+	-v)
+		# Verbose
+		VERBOSE=verbose
+		;;
+	*)
+		# Unknown option
+		echo "Error: Unknown option: $OPTION" >&2
+		usage
+		exit 1
+		;;
+	esac
+	shift
+done
+
+
+## Command Line Argument Sanity Checks
+if [ -z "$HOSTNAME" ]; then
+	# No hostname supplied
+	echo "Error: No hostname specified" >&2
+	usage
+	exit 1
+elif [ -z "$FORMATS" ] ; then
+	# No format supplied
+	echo "Error: No format specified" >&2
+	usage
+	exit 1
+elif [ -z "$SERVICES" ] ; then
+	# No service supplied
+	echo "Error: No services specified" >&2
+	usage
+	exit 1
+elif [ -z "$DATES" ] ; then
+	# No date supplied
+	echo "Error: No date specified" >&2
+	usage
+	exit 1
+fi
+
+
+## Pre-processing
+# Check that this is the only instance invoked to carry out the specific actions
+pid_lock || exit 1
+
+
+## System Integrity Checks
+# Is our target filesystem mounted?
+if ! mountpoint -q /mnt/audiofile-day-cache ; then
+	logger "Error: /mnt/audiofile-day-cache is not a mountpoint"
+	exit 1
+fi
+
+
+## Print Operating Parameters (outside the loops / on the innermost loop?)
+logger "$0 -h $HOSTNAME -f $FORMATS -s $SERVICES -d $DATES ${NO_OP:+-n} ${VERBOSE:+-v}"
+
+
+## Processing
+for format in $FORMATS ; do
+	if [ "$SERVICES" == "*" ] ; then
+		# Star service provided - lookup services
+		services=$(get_services)
+		if [ -z "$services" ] ; then
+			continue	# Next format
+		fi
+	else
+		services="$SERVICES"
+	fi
+	for service in $services ; do
+		for date in $DATES ; do
+			if ! integer_test "$( echo $date | tr -d -)" ; then
+				logger "Not a well formed date: $date - continuing"
+				continue
+			fi
+			# Sync the directory
+			logger "RSYNC: $HOSTNAME $format $service $date"
+			rsync --verbose ${NO_OP:+--dry-run} --keep-dirlinks --archive --update root@$HOSTNAME:$ROTTER_BASE/$format/$service/$date $AUDIOFILE_DAY_CACHE_STORAGE/$format/$service 2>&1 | pipe_logger
+		done
+	done
+done
