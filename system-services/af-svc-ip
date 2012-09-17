@@ -1,0 +1,66 @@
+#!/bin/bash
+#
+# af-svc-ip    Bring AudioFile shared IP online
+#
+# chkconfig: 345 30 70
+# description: Brings the shared IP for AudioFile service up on eth0.\
+#              The script first checks to see if the IP is associated \
+#              with any other host and bails out if it is.
+#
+
+SHARED_IP=10.100.105.120/24
+
+# Import OS functions
+. /etc/init.d/functions
+
+start() {
+        # Is the IP already up?
+	if status; then
+		# The IP is already associated with this host
+		return 0
+	elif ping -c 1 -W 1 ${SHARED_IP%%\/24}; then
+		# The IP is already associated with another host
+		return 1
+	fi
+	# Initialise the IP on this host
+	ip a add $SHARED_IP dev eth0
+}
+
+stop() {
+	# Is the IP associated with this host?
+	if ! status; then
+		# The IP is not associated with this host
+		return 0
+	fi
+	ip a del $SHARED_IP dev eth0
+}
+
+status() {
+	ip a list | grep $SHARED_IP &> /dev/null
+	return $?
+}
+
+case "$1" in
+start)
+	echo -n "Bringing up AudioFile shared IP: "
+	start
+	RETVAL=$?
+	;;
+stop)
+	echo -n "Bringing down AudioFile shared IP: "
+	stop
+	RETVAL=$?
+	;;
+status)
+	echo -n "AudioFile shared IP: "
+	status
+	RETVAL=$?
+	;;
+esac
+if [ $RETVAL == 0 ]; then
+	success
+else
+	failure
+fi
+echo
+exit $RETVAL
