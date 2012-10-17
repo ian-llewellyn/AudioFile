@@ -24,6 +24,10 @@ start() {
 	fi
 	# Initialise the IP on this host
 	ip a add $SHARED_IP dev eth0
+	# Update ARP tables on switches
+	arping -c 5 -s ${SHARED_IP%%\/24} 10.100.105.1
+	# Restart Apache so that it binds to the new IP
+	service httpd restart
 }
 
 stop() {
