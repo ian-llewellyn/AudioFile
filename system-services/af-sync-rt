@@ -32,7 +32,6 @@ import simplejson
 import optparse
 import signal
 import subprocess
-import re
 
 
 # Class Definitions
@@ -51,21 +50,14 @@ class SyncInstance:
     def __init__(self, **kwargs):
         if kwargs.has_key('host'):
             self.host = kwargs['host']
-        if kwargs.has_key('format'):
-            self.format = kwargs['format']
-        if kwargs.has_key('service'):
-            self.service = kwargs['service']
-
         if kwargs.has_key('map_file'):
             self.map_file = kwargs['map_file']
         else:
             self.map_file = None
-
-        if kwargs.has_key('date'):
-            self.date = kwargs['date']
-        else:
-            self.date = None
-
+        if kwargs.has_key('service'):
+            self.service = kwargs['service']
+        if kwargs.has_key('format'):
+            self.format = kwargs['format']
         if kwargs.has_key('pid'):
             assert type(kwargs['pid']) == int
             self.pid = kwargs['pid']
@@ -138,10 +130,6 @@ class SyncInstance:
                 instance.map_file = rest[i+1]
                 i += 2
                 continue
-            if rest[i] == '-d':
-                instance.date = rest[i+1]
-                i += 2
-                continue
             return False
         return instance
 
@@ -157,21 +145,17 @@ class SyncInstance:
             raise
         if self.map_file:
             cmdline += ' -m ' + self.map_file
-        if self.date:
-            cmdline += ' -d ' + self.date
         return cmdline
 
     def __cmp__(self, other):
         if cmp(self.host, other.host) != 0:
             return cmp(self.host, other.host)
-        if cmp(self.format, other.format) != 0:
-            return cmp(self.format, other.format)
-        if cmp(self.service, other.service) != 0:
-            return cmp(self.service, other.service)
         if cmp(self.map_file, other.map_file) != 0:
             return cmp(self.map_file, other.map_file)
-        if cmp(self.date, other.date) != 0:
-            return cmp(self.date, other.date)
+        if cmp(self.service, other.service) != 0:
+            return cmp(self.service, other.service)
+        if cmp(self.format, other.format) != 0:
+            return cmp(self.format, other.format)
         return 0
 
     def __str__(self):
@@ -181,8 +165,6 @@ class SyncInstance:
         description += 'Host: %s, Format: %s, Service: %s' % (self.host, self.format, self.service)
         if self.map_file:
             description += ', Map_File: %s' % self.map_file
-        if self.date:
-            description += ', Date: %s' % self.date
         return description
 
 class ConfigurationSyntaxError(Exception):
@@ -213,9 +195,9 @@ def logger(level, message):
     return True
 
 def get_service_list(host, format):
-    """get_service_list(host, format)
+    """get_file_list(host, format, service, date)
     Returns an array from the directory listing received by a HTTP call such
-    as: http://host/format/
+    as: http://host/format/service/date/
     """
     req = urllib2.Request('http://%s/webservice/v2/listservices.php?format=%s' % (host, format))
     resp = urllib2.urlopen(req)
@@ -229,7 +211,6 @@ def usage():
     print '%s <start|stop|restart|reload|status> [-c <config_file>] [-v <1..4>]' % sys.argv[0]
     print '\t-c\tOverrire default configuration file: %s.' % CONFIG_FILE
     print '\t-v\tBe more verbose on-screen.'
-    print '\t-d\tExplicitly set a fixed date in YYYY-MM-DD format.'
     return True
 
 def extract_instances(config_line):
@@ -334,7 +315,7 @@ def search_for_syncs():
     # List all af-sync-single processes
     for proc in list_processes():
         logger(4, 'Found process: %s, %s' % (proc[0], proc[1]))
-        # Read the command line params and create an instance from the result 
+        # Read the command line params and creat an instance from the result 
         instance = SyncInstance.from_cmdline(proc[1])
         # If it parsed correctly...
         if instance:
@@ -362,7 +343,6 @@ parser = optparse.OptionParser()
 
 parser.add_option('-c', '--config', dest='config_file', type=str, nargs=1)
 parser.add_option('-v', '--verbose', dest='verbosity', type=int, nargs=1)
-parser.add_option('-d', '--date', dest='date', type=str, nargs=1)
 
 args = parser.parse_args()[0]
 
@@ -371,14 +351,6 @@ if args.config_file:
 
 if args.verbosity:
     VERB_LEVEL = args.verbosity
-
-if args.date:
-    if not re.match(r'^\d{4}-\d{2}-\d{2}$', args.date):
-        usage()
-        sys.exit(os.EX_USAGE)
-    DATE = args.date
-else:
-    DATE = None
 
 
 ## Command Line Argument Sanity Checks
@@ -406,11 +378,6 @@ running_instances = search_for_syncs()
 # Read the configuration file
 configured_instances = expand_config(config_file)
 
-# If date was passed in, manipulate the configured instances to reflect it
-if DATE:
-    for i in range(len(configured_instances)):
-        configured_instances[i].date = DATE
-
 # Instances that are configured and running
 configured_and_running = [instance for instance in running_instances if instance in configured_instances]
 
@@ -420,9 +387,8 @@ stop_instances = [instance for instance in running_instances if instance not in 
 # Instances that are not running, but configured
 start_instances = [instance for instance in configured_instances if instance not in running_instances]
 
-# FIXME: Find a better place for this...
 for instance in start_instances:
-    logger(1, "To be started: %s" % instance)
+    logger(1, "To be started: Host: %s Format: %s Service: %s" %(instance.host, instance.format, instance.service))
 
 # start | stop | restart | reload | status
 action = sys.argv[1]
