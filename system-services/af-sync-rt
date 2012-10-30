@@ -1,0 +1,484 @@
+#!/bin/env python
+#
+# af-sync-rt   Synchronise audio files from another AudioFile/rotter server
+#
+# chkconfig: 345 30 70
+# description: Starts a multitude of processes to synchronise files for \
+#              format and service from a given HTTP webserver.
+#
+
+## Global Variables
+
+
+## Set Defaults
+CONFIG_FILE = '/etc/af-sync.d/af-sync.conf'
+SYNC_EXEC = '/usr/local/bin/af-sync-single'
+LOCK_FILE = '/var/lock/subsys/af-sync.lock'
+LOG_FILE = '/var/log/audiofile//af-sync-controller.log'
+LOG_LEVEL = 2
+VERB_LEVEL = 1
+
+
+## Local Variables
+config_file = CONFIG_FILE
+
+
+## Import Modules
+import urllib2
+from datetime import datetime
+import os
+import sys
+import simplejson
+import optparse
+import signal
+import subprocess
+import re
+
+
+# Class Definitions
+class SyncInstance:
+    """ SyncInstance module
+    This class is used to store parameters and control the runstate of
+    individual sync instances. It can be called with the optional parameters:
+    host=str, format=str, service=str, map_file=str and pid=int
+
+    The following methods are available:
+    start()
+    kill()
+    to_cmdline()
+    from_cmdline()
+    """
+    def __init__(self, **kwargs):
+        if kwargs.has_key('host'):
+            self.host = kwargs['host']
+        if kwargs.has_key('format'):
+            self.format = kwargs['format']
+        if kwargs.has_key('service'):
+            self.service = kwargs['service']
+
+        if kwargs.has_key('map_file'):
+            self.map_file = kwargs['map_file']
+        else:
+            self.map_file = None
+
+        if kwargs.has_key('date'):
+            self.date = kwargs['date']
+        else:
+            self.date = None
+
+        if kwargs.has_key('pid'):
+            assert type(kwargs['pid']) == int
+            self.pid = kwargs['pid']
+        else:
+            self.pid = None
+
+    def kill(self):
+        """ kill() -> True/False
+        Kill the instance. 
+        """
+        logger(2, 'Stopping instance: %s' % self)
+        try:
+            os.kill(self.pid, signal.SIGTERM)
+        except AttributeError:
+            # pid is not defined in this instance
+            # it's not running, so let's say we succeeded
+            pass
+        except OSError, error:
+            if error[1] != 'No such process':
+                return False
+            # We'll allow No such process to return True because it might help
+            # to clean up whatever mess caused us to call kill on it in the
+            # first place.
+        return True
+
+    def start(self):
+        """ start() -> True/False
+        Starts the sync instance and updates the pid attribute of the class
+        instance.
+        """
+        dev_null_r = file(os.devnull, 'r')
+        dev_null_w = file(os.devnull, 'w')
+        proc = subprocess.Popen(self.to_cmdline().split(), stdin=dev_null_r, stdout=dev_null_w, stderr=subprocess.STDOUT)
+        self.pid = proc.pid
+        logger(2, 'Started instance: %s' % self)
+        return True
+
+    @staticmethod
+    def from_cmdline(cmdline):
+        """ from_cmdline(cmdline) -> SyncInstance
+        Given a valid command line, thie function returns a SyncInstance with
+        the relevant parameters populated. Return False on error.
+        """
+        instance = SyncInstance()
+        sync_exec_basename = os.path.basename(SYNC_EXEC)
+        logger(5, 'sync_exec_basename: ' + sync_exec_basename)
+        if cmdline.find(sync_exec_basename) == -1:
+            return False
+        rest = cmdline[cmdline.find(sync_exec_basename) + len(sync_exec_basename):].split()
+        logger(5, 'Command line params: ' + str(rest))
+
+        if len(rest) == 0:
+            return False
+
+        i = 0
+        while i < len(rest):
+            if rest[i] == '-h':
+                instance.host = rest[i+1]
+                i += 2
+                continue
+            if rest[i] == '-f':
+                instance.format = rest[i+1]
+                i += 2
+                continue
+            if rest[i] == '-s':
+                instance.service = rest[i+1]
+                i += 2
+                continue
+            if rest[i] == '-m':
+                instance.map_file = rest[i+1]
+                i += 2
+                continue
+            if rest[i] == '-d':
+                instance.date = rest[i+1]
+                i += 2
+                continue
+            return False
+        return instance
+
+    def to_cmdline(self):
+        """ to_cmdline() -> cmdline
+        Returns a string representing the command line required to start this
+        sync instance.
+        """
+        try:
+            cmdline = SYNC_EXEC + ' -h ' + self.host + ' -f ' + self.format + ' -s ' + self.service
+        except AttributeError:
+            logger(1, 'Cannot create command line without required instance attributes')
+            raise
+        if self.map_file:
+            cmdline += ' -m ' + self.map_file
+        if self.date:
+            cmdline += ' -d ' + self.date
+        return cmdline
+
+    def __cmp__(self, other):
+        if cmp(self.host, other.host) != 0:
+            return cmp(self.host, other.host)
+        if cmp(self.format, other.format) != 0:
+            return cmp(self.format, other.format)
+        if cmp(self.service, other.service) != 0:
+            return cmp(self.service, other.service)
+        if cmp(self.map_file, other.map_file) != 0:
+            return cmp(self.map_file, other.map_file)
+        if cmp(self.date, other.date) != 0:
+            return cmp(self.date, other.date)
+        return 0
+
+    def __str__(self):
+        description = ''
+        if self.pid:
+            description = 'PID: %d, ' % self.pid
+        description += 'Host: %s, Format: %s, Service: %s' % (self.host, self.format, self.service)
+        if self.map_file:
+            description += ', Map_File: %s' % self.map_file
+        if self.date:
+            description += ', Date: %s' % self.date
+        return description
+
+class ConfigurationSyntaxError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+
+
+## Global Function Definitions
+def logger(level, message):
+    # 0 - do not use (absolutely no output)
+    # 1 - normal output
+    # 2 - setup operations
+    # 3 - hourly operations
+    # 4 - delta operations
+    # 5 - detailed function debug
+    global LOG_LEVEL, VERB_LEVEL
+    pid = os.getpid()
+    date_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
+    msg = '[%s] %d %d: %s' % (date_time, pid, level, message)
+    if level <= VERB_LEVEL:
+        print msg
+    if level <= LOG_LEVEL:
+        fp = file(LOG_FILE, 'a')
+        fp.write(msg + '\n')
+        fp.close()
+    return True
+
+def get_service_list(host, format):
+    """get_service_list(host, format)
+    Returns an array from the directory listing received by a HTTP call such
+    as: http://host/format/
+    """
+    req = urllib2.Request('http://%s/webservice/v2/listservices.php?format=%s' % (host, format))
+    resp = urllib2.urlopen(req)
+    decoded = simplejson.loads(resp.read())
+
+    return decoded['services']
+
+
+## Local Function Definitions
+def usage():
+    print '%s <start|stop|restart|reload|status> [-c <config_file>] [-v <1..4>]' % sys.argv[0]
+    print '\t-c\tOverrire default configuration file: %s.' % CONFIG_FILE
+    print '\t-v\tBe more verbose on-screen.'
+    print '\t-d\tExplicitly set a fixed date in YYYY-MM-DD format.'
+    return True
+
+def extract_instances(config_line):
+    """ extract_instances(config_line) -> [ ( SyncInstances )* ]
+    Given a valid line in the config file, this function will extrapolate the
+    instance or instances to be started.
+    """
+    host = config_line.split()[0]
+    rest = config_line.split()[1:]
+    result = []
+    i = 0
+    while i < len(rest):
+        map_file_invalid = False
+        try:
+            format, service = rest[i].split(':')
+        except ValueError:
+            raise ConfigurationSyntaxError('Encountered: ' + rest[i] + ' on line: ' + config_line)
+
+        # Does format need expansion?
+        if format == '*':
+            formats = ['mp2', 'mp3']
+        else:
+            formats = [format]
+
+        # Does service need expansion? - Not implemented yet!
+        if service == '*':
+            raise ConfigurationSyntaxError('* Not yet implemented for service on line: ' + config_line)
+            #services = get_service_list(host, format)
+        else:
+            services = [service]
+
+        # Is map_file the next parameter on the line?
+        if i != len(rest) - 1 and rest[i+1].startswith(os.path.sep):
+            # Yes - set it
+            map_file = rest[i+1]
+            # Skip over the map file on the next loop
+            i += 1
+        else:
+            # No - set it to None
+            map_file = None
+
+        # Map file not allowed if more than 1 service or format
+        if ( len(formats) != 1 or len(services) != 1 ) and map_file != None:
+            raise ConfigurationSyntaxError('Map file cannot be used when * is used for format or service')
+
+        # Append this/these format(s) and service(s) to the result array
+        for format in formats:
+            for service in services:
+                instance = SyncInstance(
+                    host=host, format=format, service=service, map_file=map_file
+                )
+                logger(3, 'Configured instance: %s' % instance)
+                result.append(instance)
+        i += 1
+    return result
+
+def expand_config(config_file):
+    """ expand_config(config_file) -> [ ( SyncInstance )* ]
+    Return a list of SyncInstances that have been configured in the file
+    provided.
+
+    Any duplicates found in the file are removed.
+    """
+    fp = file(config_file)
+    result = []
+    for config_line in fp.readlines():
+        if config_line.startswith('#'):
+            continue
+        if config_line.rstrip() == '':
+            continue
+        # Is the same service and format listed twice? - Would cause a target conflict
+        for instance in extract_instances(config_line):
+            if instance not in result:
+                result.append(instance)
+            else:
+                logger(1, 'Consider removing duplicate instance: %s' % instance)
+    return result
+
+def list_processes():
+    """ list_processes() -> [ (pid, cmdline)* ]
+    Returns a list of tuples, one for each of the sync processes found running
+    on the system. The tuple contains the pid in string format and the command
+    line used to start the process.
+    """
+    result = []
+    proc = subprocess.Popen(['pgrep', '-f', os.path.basename(SYNC_EXEC)], stdout=subprocess.PIPE)
+    pids = proc.stdout.read().rstrip().split()
+    logger(4, 'Found PIDs: %s' % pids)
+    for pid in pids:
+        proc = subprocess.Popen(['ps', 'ho', 'cmd', 'p', pid], stdout=subprocess.PIPE)
+        res = proc.stdout.read().rstrip()
+        result.append((pid, res))
+    return result
+
+def search_for_syncs():
+    """ search_for_syncs() -> [ ( SyncInstance )* ]
+    Wrapper function that implements list_processes() and
+    SyncInstance.from_cmdline() to produce a list of sync processes
+    found running on the system already.
+    """
+    result = []
+    # List all af-sync-single processes
+    for proc in list_processes():
+        logger(4, 'Found process: %s, %s' % (proc[0], proc[1]))
+        # Read the command line params and create an instance from the result 
+        instance = SyncInstance.from_cmdline(proc[1])
+        # If it parsed correctly...
+        if instance:
+            # ...get the PID and attach to the instance
+            instance.pid = int(proc[0])
+            # Add it to the reult array
+            result.append(instance)
+            # Log that we found it
+            logger(3, 'Found running instance: %s' % instance)
+    return result
+
+
+# PID / Lockfile
+try:
+    lock_file = file(LOCK_FILE, 'w')
+    os.utime(LOCK_FILE, None)
+    lock_file.close()
+except IOError:
+    logger(1, 'Unable to write lock file - bailing out!')
+    sys.exit(os.EX_IOERR)
+
+
+## Parse Command Line Arguments
+parser = optparse.OptionParser()
+
+parser.add_option('-c', '--config', dest='config_file', type=str, nargs=1)
+parser.add_option('-v', '--verbose', dest='verbosity', type=int, nargs=1)
+parser.add_option('-d', '--date', dest='date', type=str, nargs=1)
+
+args = parser.parse_args()[0]
+
+if args.config_file:
+    config_file = args.config_file
+
+if args.verbosity:
+    VERB_LEVEL = args.verbosity
+
+if args.date:
+    if not re.match(r'^\d{4}-\d{2}-\d{2}$', args.date):
+        usage()
+        sys.exit(os.EX_USAGE)
+    DATE = args.date
+else:
+    DATE = None
+
+
+## Command Line Argument Sanity Checks
+# Verify that the config file actually exists and is readable
+try:
+    open(config_file, 'r')
+except:
+    logger(1, 'There was a problem opening config file: %s' % config_file)
+    sys.exit(os.EX_OSFILE)
+
+
+## Pre-processing
+
+
+## System Integrity Checks
+
+
+## Print Operating Parameters (outside the loops / on the innermost loop?)
+
+
+## Processing
+# Search the system for already running processes
+running_instances = search_for_syncs()
+
+# Read the configuration file
+configured_instances = expand_config(config_file)
+
+# If date was passed in, manipulate the configured instances to reflect it
+if DATE:
+    for i in range(len(configured_instances)):
+        configured_instances[i].date = DATE
+
+# Instances that are configured and running
+configured_and_running = [instance for instance in running_instances if instance in configured_instances]
+
+# Instances that are not configured, but running
+stop_instances = [instance for instance in running_instances if instance not in configured_instances]
+
+# Instances that are not running, but configured
+start_instances = [instance for instance in configured_instances if instance not in running_instances]
+
+# FIXME: Find a better place for this...
+for instance in start_instances:
+    logger(1, "To be started: %s" % instance)
+
+# start | stop | restart | reload | status
+action = sys.argv[1]
+
+if action == 'start':
+    # Start configured syncs
+    # - do not stop anything
+    # - do not start a sync that's already started
+    for instance in start_instances:
+        instance.start()
+
+elif action == 'stop':
+    # Stop confugred syncs
+    for instance in configured_and_running:
+        instance.kill()
+
+    """
+    # Leave the below commented out if unmanaged syncs are allowed
+    # Stop unmanaged syncs too
+    for instance in stop_instances:
+        instance.kill()
+    """
+
+    os.unlink(LOCK_FILE)
+
+elif action == 'restart':
+    # Stop all configured syncs
+    for instance in configured_and_running:
+        instance.kill()
+
+    # Start all configured syncs
+    for instance in configured_instances:
+        instance.start()
+
+elif action == 'reload':
+    # Stop any unconfigured syncs
+    for instance in stop_instances:
+        instance.kill()
+
+    # Start any non-running configured syncs
+    for instance in start_instances:
+        instance.start()
+
+elif action == 'status':
+    # List configured but not running
+    print '%d of %d configured syncs running' % (len(configured_and_running), len(configured_instances))
+    # List number of unconfigured syncs running
+    print '%d unconfigured sync(s) running' % len(stop_instances)
+
+    # Exit 1 if the correct number of syncs are not running
+    if len(configured_and_running) != len(configured_instances):
+        sys.exit(1)
+
+else:
+    # Unknown action - usage
+    usage()
+    sys.exit(os.EX_USAGE)
+
+sys.exit(os.EX_OK)
