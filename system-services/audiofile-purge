@@ -1,0 +1,217 @@
+#!/bin/bash
+set -e
+
+
+## Global Variables
+AUDIOFILE_DAY_CACHE_STORAGE=/mnt/audiofile-day-cache/audio
+AUDIOFILE_ROLLING_STORAGE=/mnt/audiofile-legal/audio
+AUDIOFILE_ARCHIVE_STORAGE=/mnt/audiofile-archive/audio
+ROTTER_BASE=/var/rotter
+
+
+## Set Defaults
+FORMATS="mp2 mp3"
+SERVICES="*" # We want all the services in each format!
+DATES=$(date -d '1 day ago' +%Y-%m-%d)
+KEEP_DAYS=186
+
+
+## Local Variables
+LOGFILE=/var/log/audiofile/purge.log
+
+
+## Global Function Definitions
+logger() {
+	if [ -n "$VERBOSE" ] ; then
+		echo "$1"
+	fi
+	echo "[$$]: $1" >> $LOGFILE
+}
+
+pipe_logger() {
+	while read line ; do
+		if [ -n "$VERBOSE" ] ; then
+			echo "$line"
+		fi
+		echo "[$$]: $line" >> $LOGFILE
+	done
+}
+
+# Local Function Definitions
+usage() {
+	echo "Usage: $0 [-v] [-n] [-f format] [-s service] [-k keep_days]" >&2
+	echo -e "\t-v - verbose" >&2
+	echo -e "\t-n - no operation (dry-run)" >&2
+	echo -e "\t-f - Default: \"mp2 mp3\"" >&2
+	echo -e "\t-s - Default: \"*\"" >&2
+	echo -e "\t-k - Default: 186" >&2
+	return 0
+}
+
+get_services() {
+	service_container_dir=$(ls $AUDIOFILE_ROLLING_STORAGE/$format/)
+	if [ $? -ne 0 ] ; then return 1 ; fi
+	for dir in $service_container_dir ; do
+		if [ "$dir" == "lost+found" ] ; then
+			# We found lost+found
+			logger "Not a service directory: $dir - continuing" >&2
+			continue	# Next service candidate
+		elif [ ! -d "$AUDIOFILE_ROLLING_STORAGE/$format/$dir" ] ; then
+			logger "Not a service directory: $dir - continuing" >&2
+			continue
+		fi
+
+		echo $dir
+	done
+	return 0
+}
+
+get_dates() {
+	date_container_dir=$(ls -d $AUDIOFILE_ROLLING_STORAGE/$format/$service)
+	if [ $? -ne 0 ] ; then return 1 ; fi
+	for dir in $date_container_dir/????-??-?? ; do
+		dir=$(basename "$dir")
+		if [ "$dir" == "????-??-??" -o "$dir" == "" ] ; then
+			# We're here when ????-??-?? gets no match
+			logger "No date directories in: $AUDIOFILE_ROLLING_STORAGE/$format/$service - continuing" >&2
+			continue	# Next date candidate - chances are
+					# there are none, so break would
+					# probably be just as good here.
+		elif [ "$dir" == "lost+found" ] ; then
+			# We found lost+found
+			logger "Not a date directory: $dir - continuing" >&2
+			continue	# Next service candidate
+		elif [ ! -d "$AUDIOFILE_ROLLING_STORAGE/$format/$service/$dir" ] ; then
+			# Not a directory
+			logger "Not a date directory: $dir - continuing" >&2
+			continue	# Next service candidate
+		elif ! integer_test $(echo "$dir" | tr -d -) ; then
+			# Not a date directory
+			logger "Not a date directory: $dir - continuing" >&2
+			continue	# Next service candidate
+		fi
+		echo $dir
+	done
+	return 0
+}
+
+integer_test() {
+	test $1 -eq 0 &> /dev/null
+	local ret=$?
+	if [ $ret -eq 0 -o $ret -eq 1 ] ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+
+## Parse Command Line Arguments
+while [ $# -ne 0 ] ; do
+	OPTION=$1
+	OPTARG=$2
+	case $OPTION in
+	-f)
+		FORMATS=$OPTARG
+		shift
+		;;
+	-s)
+		SERVICES=$OPTARG
+		shift
+		;;
+	-k)
+		KEEP_DAYS=$OPTARG
+		shift
+		;;
+	-n)
+		NO_OP=no_op
+		;;
+	-v)
+		VERBOSE=verbose
+		;;
+	*)
+		logger "Illegal argument: $OPTION" >&2
+		usage
+		exit 1
+		;;
+	esac
+	shift
+done
+
+
+## Command Line Argument Sanity Checks
+if [ -z "$FORMATS" ] ; then
+	echo "Error: No format specified" >&2
+	usage
+	exit 1
+elif [ -z "$SERVICES" ] ; then
+	echo "Error: No services specified" >&2
+	usage
+	exit 1
+elif ! integer_test $KEEP_DAYS ; then
+	echo "Error: Number of days to keep not specified correctly" >&2
+	usage
+	exit 1
+fi
+
+
+## Pre-processing
+CUTOFF_DAY=$(date -d "$KEEP_DAYS days ago" +%Y-%m-%d)
+
+
+## System Integrity Checks
+
+
+## Print Operating Parameters (outside the loops / on the innermost loop?)
+logger "$0 -f $FORMATS -s $SERVICES -k $KEEP_DAYS ${NO_OP:+-n} ${VERBOSE:+-v}"
+
+
+## Processing
+for format in $FORMATS ; do
+	if [ "$SERVICES" == "*" ] ; then
+		services=$(get_services)
+		if [ -z "$services" ] ; then
+			continue	# Next format
+		fi
+	else
+		services="$SERVICES"
+	fi
+	for service in $services ; do
+		dates=$(get_dates)
+#logger "In processing: $dates"
+		if [ -z "$dates" ] ; then
+			continue	# Next service
+		fi
+		for date in $dates ; do
+			# Check to see if the day dirs are older than the
+			# cutoff date
+			if [ $(echo $CUTOFF_DAY | tr -d -) -le $(echo $date | tr -d -) ]; then
+				break	# Provided dates are in chronological
+					# order, we can break here rather than
+					# cheking the directories that fall into
+					# KEEP_DAYS territory
+				# continue	# A more thorough option
+			fi
+			# Delete the directory
+			logger "Deleting: $AUDIOFILE_ROLLING_STORAGE/$format/$service/$date"
+			if [ "$NO_OP" == "no_op" ] ; then
+				continue	# No operation - skip
+			fi
+			rm -fr $AUDIOFILE_ROLLING_STORAGE/$format/$service/$date
+			# Is this the place to do symlink checks?
+			if [ -L $AUDIOFILE_DAY_CACHE_STORAGE/$format/$service/$date ] ; then
+				logger "Deleting symlink: $AUDIOFILE_DAY_CACHE_STORAGE/$format/$service/$date"
+				rm $AUDIOFILE_DAY_CACHE_STORAGE/$format/$service/$date
+			fi
+		done
+
+		# Only full directories and their contents are deleted by
+		# the above script. To do a rolling x days_to_keep, the find
+		# line below should proabably be used
+#		find -L $AUDIOFILE_ROLLING_STORAGE/$format/$service -type f -mtime +$KEEP_DAYS -print | pipe_logger "Preparing To Delete files:"
+		if [ "$NO_OP" == "no_op" ] ; then
+			continue	# No operation - skip
+		fi
+#		find -L $AUDIOFILE_ROLLING_STORAGE/$format/$service -type f -mtime +$KEEP_DAYS -delete | pipe_logger
+	done
+done
