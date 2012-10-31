@@ -1,0 +1,27 @@
+#!/bin/bash
+
+audiofile_base_dir=/var/audiofile/audio
+
+formats="mp2 mp3"
+
+for format in $formats ; do
+	for service_dir in ${audiofile_base_dir}/${format}/* ; do
+		service=$(basename $service_dir)
+
+		echo "Format: $format"
+		echo "Service: $service"
+
+		DAYS_RETAINED=$(ls ${audiofile_base_dir}/${format}/${service} | wc -l)
+
+		echo "Days retained: $DAYS_RETAINED"
+		echo "Dates not having 24 audio files:"
+
+		for date_dir in ${audiofile_base_dir}/${format}/${service}/* ; do
+			NUMBER_AUDIO_FILES=$(ls $date_dir/*.$format | wc -l)
+			if [ $NUMBER_AUDIO_FILES -ne 24 ]; then
+				echo "$NUMBER_AUDIO_FILES audio files in $date_dir"
+			fi
+		done
+		echo
+	done
+done
