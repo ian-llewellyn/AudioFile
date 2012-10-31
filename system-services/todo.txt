@@ -1,0 +1,12 @@
+[x] Daemonise when start command is used
+[ ] Params from file override compiled in defaults
+[ ] Runs without params file
+[ ] Restart force stops existing process and restarts
+    [x] - in the background if it was previously in the background
+[x] Date and Time in log records
+[ ] Log tracebacks
+
+
+/root/af-alt/af_sync_single.py:294: DeprecationWarning: BaseException.message
+has been deprecated as of Python 2.6
+  if e.message != 'I/O operation on closed file':

@@ -1,0 +1,59 @@
+#!/bin/bash
+
+KEEP_FREE=2G
+KEEP_DAYS=7
+BASE_DIR=/audiofile-test
+
+usage() {
+        echo "Usage: $(basename "$0") [-d <keep_days>] [-f <reserve_freespace[M|G]>]"
+}
+
+while [ $# -gt 0 ]; do
+        case $1 in
+        -d)
+                KEEP_DAYS=$2
+                ;;
+        -f)
+                KEEP_FREE=$2
+                ;;
+        *)
+                usage >&2
+                exit 1
+        esac
+        shift 2
+done
+
+check_free() {
+        keep_free=${KEEP_FREE/G/ * 1024 * 1024}
+        keep_free=${keep_free/M/ * 1024}
+        keep_free=$(($keep_free))
+
+        tmp_file=$(mktemp)
+        df -P $BASE_DIR | tail -n 1 > $tmp_file
+        read device size used available utilisation mountpoint < $tmp_file
+        rm $tmp_file
+
+        if [ $available -lt $keep_free ]; then
+                return 1
+        fi
+}
+
+delete_oldest() {
+        # delete_oldest [n_files]
+        n_files=${1:-1}
+        files=$(find $BASE_DIR -type f -exec echo \"{}\" \; | xargs ls -t | tail -n $n_files)
+        for file in $files; do
+                rm $file
+        done
+}
+
+purge_days() {
+        # purge_days [n_days]
+        n_days=${1:-$KEEP_DAYS}
+        find $BASE_DIR -type f -mtime +$n_days -delete
+}
+
+purge_days
+while ! check_free; do
+        delete_oldest
+done

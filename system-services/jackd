@@ -1,0 +1,48 @@
+#!/bin/bash
+# jackd		The JACK server daemon
+#
+# chkconfig:	345 98 02
+# description:	JACK is a low-latency audio server, written primarily for the Linux \
+#		operating system.
+#
+
+logfile=/var/log/jackd.log
+
+. /etc/init.d/functions
+
+[ -f /usr/bin/jackd ] || exit 1
+
+logger() {
+	while read -s entry; do
+		if [ ! -z "$entry" ]; then
+			echo "$(date +'%b %e %T'): $entry" >> $logfile
+		fi
+	done
+}
+
+# See how we were called
+case "$1" in
+start)
+	echo -n "Starting jackd: "
+	(/usr/bin/jackd -R -ndefault -dalsa -dhw:0 -r48000 -p1024 -n4 2>&1 | logger &) && success || failure
+;;
+stop)
+	echo -n "Stopping jackd: "
+	killall /usr/bin/jackd && success
+;;
+status)
+	echo -n "jackd "
+	pgrep -f /usr/bin/jackd > /dev/null
+	if [ $? -eq 0 ]; then
+		echo -n "running with pid: $(pgrep -f /usr/bin/jackd)"
+	else
+		echo -n "not running"
+	fi
+;;
+*)
+	echo "Usage: jackd <start|stop|status>"
+	exit 1
+esac
+echo ""
+exit 0
+

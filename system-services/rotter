@@ -1,0 +1,215 @@
+#!/bin/bash
+# rotter        The rotter startup wrapper
+#
+# chkconfig:    345 99 01
+# description:  The rotter wrapper searches for rotter configuration files in /etc/ \
+#               and runs rotter-start against the config file.
+#
+# Return codes:
+# 0 - all successful
+# 1 - error
+# 2 - warnings
+
+# Source general functions (for success() and failure() only)
+. /etc/init.d/functions
+
+# rotter binary location
+rotter=/usr/local/bin/rotter
+
+# Function: usage
+# Purpose : Print the usage information to stderr and exit with status 1
+usage() {
+	echo 'Usage: $0 <start|stop|stop-all|status|config> [conf_file(s)]' >&2
+	exit 1
+}
+
+# Function: logger <log_file>
+# Purpose : Append a log message to the file specified
+logger() {
+	logfile=$1
+	while read -s entry; do
+#		if [ ! -z "$entry" ]; then
+		echo "$entry" >> $logfile
+#		fi
+	done
+}
+
+# Function: get_config_list config_file
+# Purpose : Print the list of configs from config file
+get_config_list()
+{
+        typeset config_file=$1
+
+        awk -F '[][]' '
+                NF==3 && $0 ~ /^\[.*\]/ { print $2 }
+        ' ${config_file}
+}
+
+# Function: set_config_vars config_file config [var_prefix]
+# Purpose : Set variables (optionaly prefixed by var_prefix) from config in config file
+set_config_vars()
+{
+        typeset config_file=$1
+        typeset config=$2
+        typeset var_prefix=$3
+        typeset config_vars
+
+
+        config_vars=$(awk -F= -v Config="${config}" -v Prefix="${var_prefix}" '
+                BEGIN {
+                        Config = toupper(Config);
+                        patternConfig = "\\[" Config "]";
+                }
+                FNR==1,/\[.*\]/ {
+                        if (! /\[/ && ! /[[:space:]]/) print $0;
+                }
+                toupper($0)  ~ patternConfig,(/\[/ && toupper($0) !~ patternConfig)  {
+                        if (/\[/ || NF <2) next;
+                        sub(/^[[:space:]]*/, "");
+                        sub(/[[:space:]]*=[[:space:]]/, "=");
+                        print Prefix $0;
+                }' ${config_file} )
+
+#       echo ${config_vars}
+        eval "${config_vars}"
+}
+
+# Function: create_cmd_line
+# Purpose : Creates the rotter command line in $rotter_cmd_line.
+#           The command line parameters are taken from environment variables.
+create_cmd_line()
+{
+        # Build the channel parameters for rotter
+	reset_channels=$channels
+        channel_params="-l system:capture_$channel"
+        if [ $channels -eq 2 ]; then
+                channel=`expr $channel + 1`
+                channel_params="$channel_params -r system:capture_$channel"
+	elif [ $format == "mp2" ]; then
+		channel_params="$channel_params -r system:capture_$channel"
+		channels=2
+        fi
+        channel=`expr $channel + 1`
+
+        rotter_cmd_line="$rotter -n rotter_${short_name}_$format -f $format -b $bitrate -c $channels -d $keep_hours -L $dir_layout $channel_params -u ${rotter_base_dir}${short_name}"
+
+	channels=$reset_channels
+}
+
+start_one() {
+	#echo -n 'start_one()' >&2
+
+	# Is this source enabled?
+	if [ "$enabled" == "false" ]; then
+		return 1
+	fi
+
+	# Display the section name
+	echo -ne "${cfg} \t[$format]: "
+
+	# Execute the command
+	$rotter_cmd_line 2>&1 | logger ${log_base_dir}${short_name}_${format}.log &
+
+	# Give it time to fail
+	#usleep 25000 represents the edge where you may/not catch a failure
+	usleep 50000
+
+	# Is it still running?
+	if [ ! -z $! ] && ps -p $! -o pid= > /dev/null; then
+		success
+	else
+		failure
+	fi
+	echo
+}
+
+stop_one() {
+	# Display the section name
+	echo -ne "${cfg} \t[$format]: "
+
+	#echo -n 'stop_one()' >&2
+	pkill -fo "$rotter_cmd_line" && success || failure
+	echo
+}
+
+status_one() {
+	#echo -n 'status_one()' >&2
+	echo -ne "${cfg} \t[$format]: "
+	pid=$(pgrep -f "$rotter_cmd_line")
+	if [ $? -eq 0 ]; then
+		echo -n $pid
+		$MOVE_TO_COL
+		echo -n "["
+		$SETCOLOR_SUCCESS
+		echo -n "RECORD"
+		$SETCOLOR_NORMAL
+		echo "]"
+	else
+		$MOVE_TO_COL
+		echo -n "["
+		$SETCOLOR_FAILURE
+		echo -n " STOP "
+		$SETCOLOR_NORMAL
+		echo "]"
+	fi
+	unset pid
+}
+
+config_one() {
+	echo -n 'config_one()' >&2
+}
+
+case $1 in
+start)
+	callback=start_one
+	;;
+stop)
+	callback=stop_one
+	;;
+stop-all)
+	echo -n "Stopping all rotters: "
+        killall $rotter && success || failure
+	echo
+	exit
+;;
+status)
+	callback=status_one
+	;;
+config)
+	callback=config_one
+	;;
+*)
+	usage
+	;;
+esac
+shift
+
+# Were we provided a/list of configuration files?
+if [ -z "$1" ]; then
+	configs=$(ls /etc/rotter*.conf)
+else
+	configs="$@"
+fi
+
+echo $configs
+
+for config_file in $configs; do
+	if [ ! -f "$config_file" ] || [ ! -r "$config_file" ]; then
+		echo "Cannot read file: $config_file---" >&2
+		continue
+	fi
+
+	# channel counter
+	channel=1
+
+	# Read the section names in from the config file
+	get_config_list ${config_file} | while read cfg; do
+		# For each section, setup the environment
+		set_config_vars ${config_file} "${cfg}"
+
+		# Create command line in $rotter_cmd_line var and increment channel counter
+		create_cmd_line
+
+		$callback
+	done
+done
