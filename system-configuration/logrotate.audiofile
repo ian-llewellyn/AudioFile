@@ -1,0 +1,8 @@
+/var/log/audiofile/*.log {
+    missingok
+    notifempty
+    copytruncate
+    compress
+    daily
+    size 1M
+}
