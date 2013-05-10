@@ -55,16 +55,64 @@ if ( $callback !== false ) {
 			"id":"radio1lw"
 		},
 		{
+			"title":"RTE ONE [TV]",
+			"id":"tvone"
+		},
+		{
+			"title":"RTE TWO [TV]",
+			"id":"tvtwo"
+		},
+		{
+			"title":"BBC Radio 4",
+			"id":"bbcradio4"
+		},
+		{
+			"title":"BBC Radio 5",
+			"id":"bbcradio5"
+		},
+		{
+			"title":"BBC Radio Ulster",
+			"id":"bbcradioulster"
+		},
+		{
+			"title":"BBC World Service",
+			"id":"bbcworldservice"
+		},
+		{
+			"title":"BBC News 24 [TV]",
+			"id":"bbcnews24"
+		},
+		{
+			"title":"Dail",
+			"id":"dail"
+		},
+		{
+			"title":"Seanad",
+			"id":"seanad"
+		},
+		{
+			"title":"Al Jazeera [TV]",
+			"id":"aljazeera"
+		},
+		{
+			"title":"CNN [TV]",
+			"id":"cnn"
+		},
+		{
 			"title":"Newstalk",
 			"id":"newstalk"
+		},
+		{
+			"title":"Sky News [TV]",
+			"id":"skynews"
 		},
 		{
 			"title":"Today fm",
 			"id":"todayfm"
 		},
 		{
-			"title":"4fm",
-			"id":"4fm"
+			"title":"WRN",
+			"id":"npr"
 		}
 	]
 }<?php
