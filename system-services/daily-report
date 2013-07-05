@@ -2,18 +2,10 @@
 
 uptime
 echo
-df -l
-echo
 df -h /mnt/{audiofile-day-cache,x9k-*}
 echo
-du -sh /var/log/httpd
-echo
-ls -altrh /var/log/httpd
-echo
-exit 0
 du -sh /mnt/audiofile-day-cache/audio/mp{2,3}/*
 echo
 du -sh /mnt/x9k-audiofile/audio/mp{2,3}/*
 echo
 du -sh /mnt/x9k-audiofile_dyn_arch/audio/mp2/{2fm,lyricfm,radio1,rnag}
-
