@@ -1,9 +1,6 @@
 #!/bin/bash
 set -e
 
-
-echo "day-cache-relegate started at `date`" >> /var/log/audiofile/day-cache-relegate.log
-
 ## Global Variables
 AUDIOFILE_DAY_CACHE_STORAGE=/mnt/audiofile-day-cache/audio
 AUDIOFILE_ROLLING_STORAGE=/mnt/audiofile-legal/audio
@@ -14,7 +11,7 @@ ROTTER_BASE=/var/rotter
 ## Set Defaults
 FORMATS="mp2 mp3"
 SERVICES="*" # We want all the services in each format!
-DATES=$(date -d '2 day ago' +%Y-%m-%d)
+DATES=$(date -d '1 day ago' +%Y-%m-%d)
 KEEP_DAYS=186
 
 
@@ -240,7 +237,7 @@ for format in $FORMATS ; do
 				mkdir -v $target_storage/$format/$service 2>&1 | pipe_logger
 			fi
 			# If this isn't atomic enough, it may need replacing with a copy, remove and link
-			nice -n +1 mv -v $AUDIOFILE_DAY_CACHE_STORAGE/$format/$service/$date $target_storage/$format/$service/$date 2>&1 | pipe_logger
+			mv -v $AUDIOFILE_DAY_CACHE_STORAGE/$format/$service/$date $target_storage/$format/$service/$date 2>&1 | pipe_logger
 			if [ ${PIPESTATUS[0]} -ne 0 ]; then
 				logger "There was a problem moving: $format $service $date"
 				continue	# Next date/(service more likely)
@@ -249,7 +246,4 @@ for format in $FORMATS ; do
 		done
 	done
 done
-/usr/bin/logger "day-cache-relegate for $DATES finished"
-echo "day-cache-relegate for $DATES finished at `date`" >> /var/log/audiofile/day-cache-relegate.log
-/usr/local/bin/daily-report
 exit 0
