@@ -73,7 +73,12 @@ class AFSingle(object):
                 # A map file is being used, empty this file
                 # (it hasn't been done in over a day!)
                 logging.info('Truncated target file: %s', self.target_file)
-                open(self.target_file, 'w').truncate()
+                try:
+                    open(self.target_file, 'w').truncate()
+                except IOError:
+                    directory_array = self.target_file.split(os.path.sep)[:-1]
+                    directory = os.path.sep.join(directory_array)
+                    os.makedirs(directory)
                 recent_truncations.append(self.target_file)
                 if len(recent_truncations) > 24:
                     recent_truncations.remove(recent_truncations[0])
@@ -245,8 +250,8 @@ class Delta(object):
 ## Local Function Definitions
 def usage():
     """ Prints the right way to use the script """
-    print '%s -h <host> -s <service> -f <format> [-v] [-n]' % sys.argv[0]
-    return
+    print('%s -h <host> -s <service> -f <format> [-m map file] [-d date] '
+          '[-v] [-n]' % sys.argv[0])
 
 
 def file_map(date, map_file, src_file, file_format, service):
@@ -264,7 +269,8 @@ def file_map(date, map_file, src_file, file_format, service):
         # calculate the key i.e. local day of week and hour
         dow, hour = utc_file_to_local(src_file)
         # open mapping file
-        map_file = open(map_file, 'r')
+        map_file_full_path = '/etc/af-sync.d/%(map_file)s' % locals()
+        map_file = open(map_file_full_path, 'r')
         # read contents into array or such
         for line in map_file.readlines():
             # Ignore comment lines
@@ -319,26 +325,6 @@ def setup_parser():
     parser.add_option('-v', '--verbose', dest='verbosity', type=str, nargs=1)
     parser.add_option('-n', '--noop', dest='noop', action='store_true',
                       default=False)
-
-#    parser.add_argument('-h', '--host', dest='host', type=str, required=True)
-#    parser.add_argument('-f', '--format', dest='file_format', type=str,
-#                        required=True,
-#                        help=('The format of your audio file, '
-#                              'either mp2 or mp3'))
-
-#    parser.add_argument('-s', '--service', dest='service', type=str,
-#                        required=True,
-#                        help='The service where the data comes from')
-#
-#    parser.add_argument('-d', '--date', dest='date', type=str,
-#                        help='The date you want to get the data for')
-#    parser.add_argument('-m', '--map-file', dest='map_file', type=str,
-#                        help='No idea')
-#
-#    parser.add_argument('-v', '--verbose', dest='verbosity', type=int,
-#                        help='Verbosity level.')
-#    parser.add_argument('-n', '--noop', dest='noop', action='store_true',
-#                        default=False, help='Dry run. Doesn\'t do anything.')
 
     args = parser.parse_args()
     return args[0]
@@ -422,11 +408,19 @@ def test():
 
     date = str(datetime.datetime.utcnow().date())
 
+    options = {}
+    if args.map_file:
+        options['map_file'] = args.map_file
+    if args.noop:
+        options['noop'] = args.noop
+    if args.date:
+        options['date'] = args.date
+
     records = af_sync_multi.get_file_list(host, file_format, service, date)
     for record in records:
         instance = AFSingle(host=host, service=service,
                             file_format=file_format,
-                            record=record)
+                            record=record, options=options)
         instance.process()
 
 if __name__ == '__main__':

@@ -11,7 +11,6 @@ import simplejson
 import os
 import time
 import thread
-import collections
 
 sys.path.append('/home/paco/Projects/RTE/etc/af-sync.d/')
 import configuration
@@ -24,17 +23,6 @@ class ConfigurationSyntaxError(Exception):
     """ Exception to be raised when it finds an error in the configuration file
     """
     pass
-
-
-def update(dict1, dict2):
-    """ Update a dictionnary recursively with another dictionnary """
-    for key, value in dict2.iteritems():
-        if isinstance(value, collections.Mapping):
-            ret = update(dict1.get(key, {}), value)
-            dict1[key] = ret
-        else:
-            dict1[key] = dict2[key]
-    return dict1
 
 
 class Server(object):
@@ -128,79 +116,39 @@ class AFMulti(object):
         run_host = False
         run_service = False
 
-        host_gen = self.run_host()
-        host = host_gen.next()
-
-        service_gen = self.run_service(host)
-        service = service_gen.next()
-
-        file_format_gen = self.run_file_format(host, service)
-
         processed = 0
         records_map = self.get_files_to_update()
+
         while True:
+            for config in self.config:
+                host = config['host']
+                service = config['service']
+                file_formats = config['file_formats']
+                map_file = config['map_file']
+                # Get the the records for a specific host,
+                # service and format
+                for file_format in file_formats:
+                    records = records_map[(host, service, file_format)]
 
-            try:
-                # Goes through all the file formats
-                file_format = file_format_gen.next()
-                run_service_gen = False
-            except StopIteration:
-                run_service = True
-
-            try:
-                # This means, we went through all the files format
-                # and now we need to go to the next service
-                if run_service:
-                    service = service_gen.next()
-                    file_format_gen = self.run_file_format(host, service)
-                    file_format = file_format_gen.next()
-                    run_host = False
-                    run_service = False
-            except StopIteration:
-                service_gen = self.run_service(host)
-                run_host = True
-
-            try:
-                # We are finished with one service and all its file_formats
-                # We need to go through the next host, and do the same stuff
-                # again
-                if run_host:
-                    host = host_gen.next()
-                    service_gen = self.run_service(host)
-                    service = service_gen.next()
-                    file_format_gen = self.run_file_format(host, service)
-                    file_format = file_format_gen.next()
-                    run_host = False
-                    run_service = False
-            except StopIteration:
-                host_gen = self.run_host()
-                host = host_gen.next()
-                service_gen = self.run_service(host)
-                service = service_gen.next()
-                file_format_gen = self.run_file_format(host, service)
-                file_format = file_format_gen.next()
-                run_service = False
-                run_host = False
-                processed += 1
-
-            # Get the the records for a specific host, service and format
-            records = records_map[(host, service, file_format)]
-
-            sleep_time = 5
-            if processed >= len(records):
-                time.sleep(sleep_time)
-                records_map = self.get_files_to_update()
-            else:
-                current_record = records[processed]
-                file_name = current_record['file']
-                logging.info('Processing: Host: %(host)s, '
-                             'Service: %(service)s, '
-                             'Format: %(file_format)s,'
-                             'File: %(file_name)s', locals())
-                instance = AFSingle(host=host, file_format=file_format,
-                                    service=service, record=current_record)
-                self.target_file = instance.target_file
-                instance.process()
+                    sleep_time = 5
+                    if processed >= len(records):
+                        time.sleep(sleep_time)
+                        records_map = self.get_files_to_update()
+                    else:
+                        current_record = records[processed]
+                        file_name = current_record['file']
+                        logging.info('Processing: Host: %(host)s, '
+                                     'Service: %(service)s, '
+                                     'Format: %(file_format)s,'
+                                     'File: %(file_name)s', locals())
+                        options = {'map_file': map_file}
+                        instance = AFSingle(host=host,
+                                            file_format=file_format,
+                                            service=service,
+                                            record=current_record,
+                                            options=options)
+                        self.target_file = instance.target_file
+                        instance.process()
 
     def fullstatus(self):
         """ Get the full status using the status method """
@@ -215,42 +163,28 @@ class AFMulti(object):
         }
 
         new_config = self._parse_config(configuration.CONFIG_PATH)
-        configured = 0
-        for host in new_config:
-            for service in new_config[host]:
-                for file_format in new_config[host][service]:
-                    configured += 1
+        configured = len(self.config)
         output += 'Configured instances: %(configured)d\n' % locals()
 
         running = 0
-        for host in new_config:
-            if host in self.config:
-                for service in new_config[host]:
-                    if service in self.config[host]:
-                        for file_format in new_config[host][service]:
-                            if file_format in self.config[host][service]:
-                                running += 1
+        for config in new_config:
+            if config in self.config:
+                running += 1
         output += 'Configured and running: %(diff)d\n' % {'diff': running}
-        output += 'Configured and not running: %(diff)d\n' % {
-            'diff': configured - running
-        }
 
         diff = 0
 
-        for host in self.config:
-            if host in new_config:
-                for service in self.config[host]:
-                    if service in new_config[host]:
-                        for file_format in self.config[host][service]:
-                            if file_format not in new_config[host][service]:
-                                diff += 1
-                    else:
-                        for _ in self.config[host][service]:
-                            diff += 1
-            else:
-                for service in self.config[host]:
-                    for _ in self.config[host][service]:
-                        diff += 1
+        for config in new_config:
+            if config not in self.config:
+                diff += 1
+        output += 'Configured and not running: %(diff)d\n' % {
+            'diff': diff
+        }
+
+        diff = 0
+        for config in self.config:
+            if config not in new_config:
+                diff += 1
         output += 'Running but not configured: %(diff)d\n' % {'diff': diff}
 
         if full:
@@ -277,33 +211,19 @@ class AFMulti(object):
         message = 'Configuration has been loaded'
         self.server.send(message)
 
-    def run_host(self):
-        """ Returns one host at a time """
-        for host in self.config:
-            yield host
-
-    def run_service(self, host):
-        """ Returns one service at a time """
-        for service in self.config[host]:
-            yield service
-
-    def run_file_format(self, host, service):
-        """ Returns one file format at a time """
-        for file_format in self.config[host][service]:
-            yield file_format
-
     def get_files_to_update(self):
         """ Gets all the files that can be downloaded based on
         the different hosts/service/formats """
         records_map = {}
-        for host in self.config:
-            for service in self.config[host]:
-                for file_format in self.config[host][service]:
+        for config in self.config:
+            host = config['host']
+            service = config['service']
+            file_formats = config['file_formats']
+            for file_format in file_formats:
+                list_files = get_file_list(host, file_format, service,
+                                           self.date)
 
-                    list_files = get_file_list(host, file_format, service,
-                                               self.date)
-
-                    records_map[(host, service, file_format)] = list_files
+                records_map[(host, service, file_format)] = list_files
         return records_map
 
     def _parse_config(self, config_path):
@@ -321,13 +241,13 @@ class AFMulti(object):
                              config_path)
             sys.exit(os.EX_OSFILE)
 
-        config = {}
+        config = []
         for config_line in lines:
             # We skip comments and empty lines
             if config_line.startswith('#') or config_line.rstrip() == '':
                 continue
             config_bit = self._extract_config(config_line)
-            config = update(config, config_bit)
+            config.append(config_bit)
 
         config_file.close()
         return config
@@ -339,55 +259,37 @@ class AFMulti(object):
         will extrapolate the instance or instances to be started.
         """
         #map_file_invalid = False
+        config = {}
         try:
-            host = config_line.split()[0]
+            config['host'] = config_line.split()[0]
             file_format, service = config_line.split()[1].split(':')
+            config['service'] = service
+            config['map_file'] = None
+            if len(config_line.split()) > 2:
+                config['map_file'] = config_line.split()[2]
         except ValueError:
             raise ConfigurationSyntaxError('Badly written line: %s'
                                            % config_line)
 
         # Does format need expansion?
         if file_format == '*':
-            file_formats = ['mp2', 'mp3']
+            config['file_formats'] = ['mp2', 'mp3']
         else:
-            file_formats = [file_format]
+            config['file_formats'] = [file_format]
 
         # Does service need expansion? - Not implemented yet!
         if service == '*':
             raise ConfigurationSyntaxError(
                 '* Not yet implemented for service on line: ' + config_line
             )
-        else:
-            services = [service]
 
-        # Is map_file the next parameter on the line?
-        #if i != len(rest) - 1 and rest[i+1].startswith(os.path.sep):
-        #   # Yes - set it
-        #   map_file = rest[i+1]
-        #   # Skip over the map file on the next loop
-        #   i += 1
-        #else:
-        #    # No - set it to None
-        #    map_file = None
-
-        # Map file not allowed if more than 1 service or format
-        #if((len(file_formats) != 1 or len(services) != 1)
-        #   and map_file is not None):
-        #    raise ConfigurationSyntaxError(
-        #        'Map file cannot be used when *'
-        #        'is used for format or service'
-        #    )
-
-        config = {}
+        # Map file not allowed if more than 1 format
+        if len(config['file_formats']) != 1 and config['map_file'] is not None:
+            raise ConfigurationSyntaxError(
+                'Map file cannot be used when * is used for format'
+            )
 
         # Append this/these format(s) and service(s) to the result array
-        if host not in config:
-            config[host] = {}
-        for file_format in file_formats:
-            for service in services:
-                if service not in config[host]:
-                    config[host][service] = []
-                config[host][service].append(file_format)
         return config
 
     def send(self, message):
