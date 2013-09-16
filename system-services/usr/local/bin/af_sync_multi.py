@@ -188,12 +188,13 @@ class AFMulti(object):
         output += 'Running but not configured: %(diff)d\n' % {'diff': diff}
 
         if full:
-            for host in self.config:
+            for config in self.config:
+                host = config['host']
+                service = config['service']
+                file_format = ', '.join(config['file_formats'])
                 output += 'Hostname: %(host)s\n' % locals()
-                for service in self.config[host]:
-                    output += '\tService: %(service)s\n' % locals()
-                    for file_format in self.config[host][service]:
-                        output += '\t\tFormat: %(file_format)s\n' % locals()
+                output += '\tService: %(service)s\n' % locals()
+                output += '\t\tFormat: %(file_format)s\n' % locals()
         self.send(output)
 
     def stop(self):
