@@ -14,19 +14,20 @@ import sys
 from datetime import datetime
 import os
 import optparse
+import logging
 
 sys.path.append('/home/paco/Projects/RTE/usr/local/bin/')
-sys.path.append('/home/paco/Projects/RTE/usr/local/lib/')
+sys.path.append('/home/paco/Projects/RTE/etc/af-sync.d/')
 import af_sync_multi
-import values
+import configuration
 
 
 class AFDaemon(object):
     """ Audio file Daemon """
 
-    def __init__(self, port):
+    def __init__(self, port, config_path=None):
         """ Constructor that takes a PID file as an argument """
-        self.config_path = '/etc/af-sync.d/af-sync.conf'
+        self.config_path = config_path or configuration.CONFIG_PATH
         self.port = port
         self.socket = socket.socket()
         self.host = socket.gethostname()
@@ -77,21 +78,16 @@ class AFDaemon(object):
 
 def logger(level, message):
     """ Logging definition """
-    # 0 - do not use (absolutely no output)
-    # 1 - normal output
-    # 2 - setup operations
-    # 3 - hourly operations
-    # 4 - delta operations
-    # 5 - detailed function debug
-    verb_level = values.VERB_LEVEL
-    log_level = values.LOG_LEVEL
+    verb_level = level or configuration.VERB_LEVEL
+    log_level = level or configuration.LOG_LEVEL
+
     current_pid = os.getpid()
     date_time = datetime.now().strftime('%Y-%m-%dT%H:%M:%S')
     msg = '[%s] %d %d: %s' % (date_time, current_pid, level, message)
     if level <= verb_level:
         print msg
     if level <= log_level:
-        log_file = file(values.LOG_FILE, 'a')
+        log_file = file(configuration.LOG_FILE, 'a')
         log_file.write(msg + '\n')
         log_file.close()
     return True
@@ -104,8 +100,15 @@ def main():
     parser = optparse.OptionParser()
 
     parser.add_option('-c', '--config', dest='config_file', type=str, nargs=1)
-    parser.add_option('-v', '--verbose', dest='verbosity', type=int, nargs=1)
+    parser.add_option('-v', '--verbose', dest='verbosity', type=str, nargs=1)
+    args = parser.parse_args()[0]
 
+    if args.verbosity:
+        try:
+            level = getattr(logging, args.verbosity)
+        except:
+            print('Please specify a good logging level. '
+                  'i.e DEBUG, INFO, WARNING, ERROR, CRITICAL')
     #try:
     #    args = parser.parse_args()[0]
     #except SystemExit:
@@ -122,7 +125,7 @@ def main():
         action = sys.argv[1]
 
     if action:
-        daemon = AFDaemon(values.PORT_NUMBER)
+        daemon = AFDaemon(configuration.PORT_NUMBER)
         if action not in ('fg', 'start', 'restart'):
             daemon.connect()
             try:
@@ -130,7 +133,9 @@ def main():
             except AttributeError:
                 print '%s is not a valid command' % action
                 sys.exit(1)
-            print daemon.read()
+            response = daemon.read()
+            if response:
+                print response
         elif action == 'fg':
             AFDaemon.start(start_server=False)
         else:
@@ -153,7 +158,7 @@ def usage():
     print('%s <start|stop|restart|reload|status> '
           '[-c <config_file>] [-v <1..4>]' % sys.argv[0])
     print('\t-c\tOverrire default configuration file: %s.'
-          % values.CONFIG_PATH)
+          % configuration.CONFIG_PATH)
     print('\t-v\tBe more verbose on-screen.')
 
 if __name__ == '__main__':

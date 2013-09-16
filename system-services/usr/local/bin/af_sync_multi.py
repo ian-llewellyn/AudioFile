@@ -13,8 +13,8 @@ import time
 import thread
 import collections
 
-sys.path.append('/home/paco/Projects/RTE/usr/local/lib/')
-import values
+sys.path.append('/home/paco/Projects/RTE/etc/af-sync.d/')
+import configuration
 
 sys.path.append('/home/paco/Projects/RTE/usr/local/bin/')
 from af_sync_single import AFSingle
@@ -43,7 +43,7 @@ class Server(object):
     def __init__(self):
         self.socket = socket.socket()
         self.host = socket.gethostname()
-        self.port = values.PORT_NUMBER
+        self.port = configuration.PORT_NUMBER
         self.connection = self.address = None
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.connect()
@@ -113,12 +113,12 @@ class AFMulti(object):
         self.server = None
         if start_server:
             self.server = Server()
-        config_path = config or values.CONFIG_PATH
+        config_path = config or configuration.CONFIG_PATH
         self.config = self._parse_config(config_path)
         # FIXME: if self.date is None, it means: do not stop at the end of the
         # day. Else, download everything for a specific day
         # The way it is now, it will stop at the end of the day
-        self.date = values.DATE
+        self.date = configuration.DATE
         self.target_file = ''
 
     def run(self, args):
@@ -214,7 +214,7 @@ class AFMulti(object):
             'current_file': self.target_file
         }
 
-        new_config = self._parse_config(values.CONFIG_PATH)
+        new_config = self._parse_config(configuration.CONFIG_PATH)
         configured = 0
         for host in new_config:
             for service in new_config[host]:
@@ -273,7 +273,7 @@ class AFMulti(object):
         """ Reload the configuration """
         lock = thread.allocate_lock()
         with lock:
-            self.config = self._parse_config(values.CONFIG_PATH)
+            self.config = self._parse_config(configuration.CONFIG_PATH)
         message = 'Configuration has been loaded'
         self.server.send(message)
 
@@ -442,7 +442,7 @@ def main(start_server=True):
     """ This function actually runs the program. """
     args = setup_parser()
     logging.basicConfig(level=logging.DEBUG)
-    config_file = args.config_file or values.CONFIG_PATH
+    config_file = args.config_file or configuration.CONFIG_PATH
 
     multi = AFMulti(config_file, start_server=start_server)
 

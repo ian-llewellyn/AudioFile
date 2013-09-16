@@ -12,8 +12,8 @@ import optparse
 import logging
 import logging.handlers
 
-sys.path.append('/home/paco/Projects/RTE/usr/local/lib/')
-import values
+sys.path.append('/home/paco/Projects/RTE/etc/af-sync.d')
+import configuration
 
 
 class AFSingle(object):
@@ -32,7 +32,7 @@ class AFSingle(object):
         self.host = host
         self.file_format = file_format
         self.service = service
-        self.date = values.DATE
+        self.date = configuration.DATE
         self.operation = True
         self.map_file = None
         self.filename = record['file']
@@ -99,24 +99,27 @@ class AFSingle(object):
                         'filename': self.filename})
 
             delta = Delta(req_uri, self.target_file, self.operation)
-            while delta_failures <= values.DELTA_RETRIES:
+            while delta_failures <= configuration.DELTA_RETRIES:
                 while delta.fetch():
                     # Successful update - reset failure count and sleep
                     delta_failures = 0
                     no_progress_sleep_time = 0
                     logging.debug('Delta success - About to sleep '
-                                  'for %d ms', values.INTER_DELTA_SLEEP_TIME)
-                    time.sleep(values.INTER_DELTA_SLEEP_TIME / 1000.0)
+                                  'for %d ms',
+                                  configuration.INTER_DELTA_SLEEP_TIME)
+                    time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
 
                 # Unsuccessful update - mark as a failure and sleep
                 delta_failures += 1
                 logging.debug('Delta failed %d time(s) '
                               '- About to sleep for %d ms',
-                              delta_failures, values.INTER_DELTA_SLEEP_TIME)
-                time.sleep(values.INTER_DELTA_SLEEP_TIME / 1000.0)
+                              delta_failures,
+                              configuration.INTER_DELTA_SLEEP_TIME)
+                time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
 
             # (at least once an hour - more if errors)
-            logging.info('Delta retries: %d exceeded', values.DELTA_RETRIES)
+            logging.info('Delta retries: %d exceeded',
+                         configuration.DELTA_RETRIES)
             delta.tgt_fp.close()
             delta.tgt_fp = None
 
@@ -128,8 +131,8 @@ class AFSingle(object):
 
             # If no progress is made, we don't want the script going
             # to 100% CPU. Back off..
-            if no_progress_sleep_time > values.NO_PROGRESS_SLEEP_TIME:
-                no_progress_sleep_time = values.NO_PROGRESS_SLEEP_TIME
+            if no_progress_sleep_time > configuration.NO_PROGRESS_SLEEP_TIME:
+                no_progress_sleep_time = configuration.NO_PROGRESS_SLEEP_TIME
                 logging.warning('no_progress_sleep_time hit max. '
                                 'About to sleep for %d ms',
                                 no_progress_sleep_time)
@@ -230,7 +233,7 @@ class Delta(object):
         # Write the update and flush to disk
         chunk = True
         while chunk:
-            chunk = http_resp.read(values.CHUNK_SIZE)
+            chunk = http_resp.read(configuration.CHUNK_SIZE)
             self.tgt_fp.write(chunk)
             self.tgt_fp.flush()
 
@@ -254,7 +257,7 @@ def file_map(date, map_file, src_file, file_format, service):
     date = date or str(datetime.datetime.utcnow().date())
     if not map_file:
         return os.path.sep.join(
-            [values.AUDIOFILE_DAY_CACHE_STORAGE, file_format,
+            [configuration.AUDIOFILE_DAY_CACHE_STORAGE, file_format,
              service, date, src_file]
         )
     else:
@@ -352,22 +355,22 @@ def setup_log_handlers(log_dict):
     file_handler = log_dict['file_handler']
 
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(values.LOGFILE_LOG_LEVEL)
+    file_handler.setLevel(configuration.LOGFILE_LOG_LEVEL)
     file_handler.setFormatter(standard_format)
 
     stderr_handler = logging.StreamHandler()
-    stderr_handler.setLevel(values.STDERR_LOG_LEVEL)
+    stderr_handler.setLevel(configuration.STDERR_LOG_LEVEL)
     stderr_handler.setFormatter(standard_format)
 
     #email_handler = logging.handlers.SMTPHandler(
     #    'localhost',
     #    'AudioFile Rea-Time Sync <af-sync-%s-%s@%s>'
     #    % (args.service, args.format, gethostname()),
-    #    values.ADMIN_EMAILS, 'Log output from af-sync-%s-%s'
+    #    configuration.ADMIN_EMAILS, 'Log output from af-sync-%s-%s'
     #    % (args.service, args.file_format)
     #)
     #
-    #email_handler.setLevel(values.EMAIL_LOG_LEVEL)
+    #email_handler.setLevel(configuration.EMAIL_LOG_LEVEL)
     #email_handler.setFormatter(standard_format)
     #print(email_handler)
     #
@@ -389,7 +392,7 @@ def test():
                 % (args.service, args.file_format))
 
     log_dict = {
-        'stderr_log_level': args.verbosity or values.STDERR_LOG_LEVEL,
+        'stderr_log_level': args.verbosity or configuration.STDERR_LOG_LEVEL,
         'log_file': ('/var/log/audiofile/af-sync-%s-%s.log'
                      % (args.service, args.file_format)),
         'standard_format': logging.Formatter(
@@ -403,9 +406,9 @@ def test():
     # Bail out early if the target directory doesn't exist.
     # Only happens if a map file is not being used.
     if(not args.map_file
-       and not os.path.exists(values.AUDIOFILE_DAY_CACHE_STORAGE)):
+       and not os.path.exists(configuration.AUDIOFILE_DAY_CACHE_STORAGE)):
         logging.fatal('AUDIOFILE_DAY_CACHE_STORAGE: %s does not exist',
-                      values.AUDIOFILE_DAY_CACHE_STORAGE)
+                      configuration.AUDIOFILE_DAY_CACHE_STORAGE)
         sys.exit(os.EX_OSFILE)
 
     #NO_OP = args.noop
