@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+""" This module contains the Daemon class that we use in the module
+in the init.d folder """
 
 import sys
 import os
@@ -7,7 +9,7 @@ import atexit
 from signal import SIGTERM
 
 
-class Daemon:
+class Daemon(object):
     """
     A generic daemon class.
 
@@ -31,9 +33,9 @@ class Daemon:
             if pid > 0:
                 # exit first parent
                 sys.exit(0)
-        except OSError, e:
+        except OSError, error:
             sys.stderr.write("fork #1 failed: %d (%s)\n"
-                             % (e.errno, e.strerror))
+                             % (error.errno, error.strerror))
             sys.exit(1)
 
         # decouple from parent environment
@@ -47,20 +49,20 @@ class Daemon:
             if pid > 0:
                 # exit from second parent
                 sys.exit(0)
-        except OSError, e:
+        except OSError, error:
             sys.stderr.write("fork #2 failed: %d (%s)\n"
-                             % (e.errno, e.strerror))
+                             % (error.errno, error.strerror))
             sys.exit(1)
 
         # redirect standard file descriptors
         sys.stdout.flush()
         sys.stderr.flush()
-        si = file(self.stdin, 'r')
-        so = file(self.stdout, 'a+')
-        se = file(self.stderr, 'a+', 0)
-        os.dup2(si.fileno(), sys.stdin.fileno())
-        os.dup2(so.fileno(), sys.stdout.fileno())
-        os.dup2(se.fileno(), sys.stderr.fileno())
+        stdin = file(self.stdin, 'r')
+        stdout = file(self.stdout, 'a+')
+        stderror = file(self.stderr, 'a+', 0)
+        os.dup2(stdin.fileno(), sys.stdin.fileno())
+        os.dup2(stdout.fileno(), sys.stdout.fileno())
+        os.dup2(stderror.fileno(), sys.stderr.fileno())
 
         # write pidfile
         atexit.register(self.delpid)
@@ -68,6 +70,7 @@ class Daemon:
         file(self.pidfile, 'w+').write("%s\n" % pid)
 
     def delpid(self):
+        """ Removed the pid file """
         os.remove(self.pidfile)
 
     def start(self):
@@ -76,9 +79,9 @@ class Daemon:
         """
         # Check for a pidfile to see if the daemon already runs
         try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            pid_file = file(self.pidfile, 'r')
+            pid = int(pid_file.read().strip())
+            pid_file.close()
         except (IOError, ValueError):
             pid = None
 
@@ -97,9 +100,9 @@ class Daemon:
         """
         # Get the pid from the pidfile
         try:
-            pf = file(self.pidfile, 'r')
-            pid = int(pf.read().strip())
-            pf.close()
+            pid_file = file(self.pidfile, 'r')
+            pid = int(pid_file.read().strip())
+            pid_file.close()
         except IOError:
             pid = None
 
@@ -135,11 +138,11 @@ class Daemon:
         It will be called after the process has been
         daemonized by start() or restart().
         """
-        raise NotImplemented
+        raise NotImplementedError()
 
     def status(self):
         """
         You should override this method when you subclass Daemon.
         It should get the status and print it
         """
-        raise NotImplemented
+        raise NotImplementedError()
