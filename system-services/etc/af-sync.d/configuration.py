@@ -6,11 +6,15 @@
 import logging
 import datetime
 
+LOG_FORMAT = '[%(asctime)s] %(process)d %(levelname)s: %(message)s'
+LOG_FILE = '/var/log/audiofile/af-sync-%s-%s.log'
+DEBUG_LOG_FILE = '/var/log/audiofile/af-sync-%s-%s_debug.log'
+
 # Logging
-ADMIN_EMAILS = []  # While debugging the script
-#ADMIN_EMAILS = ['Ian.Llewellyn@rte.ie', 'radiomnt@rte.ie']
-STDERR_LOG_LEVEL = logging.INFO
+ADMIN_EMAILS = ['Ian.Llewellyn@rte.ie', 'radiomnt@rte.ie']
+STDERR_LOG_LEVEL = logging.DEBUG
 LOGFILE_LOG_LEVEL = logging.INFO
+LOGFILE_DEBUG_LOG_LEVEL = logging.DEBUG
 EMAIL_LOG_LEVEL = logging.WARNING
 
 # Files
@@ -27,6 +31,5 @@ DATE = str(datetime.datetime.utcnow().date())
 PORT_NUMBER = 11111
 CONFIG_PATH = '/etc/af-sync.d/af-sync.conf'
 
-LOG_FILE = '/var/log/audiofile//af-sync-controller.log'
 LOG_LEVEL = 2
 VERB_LEVEL = 1

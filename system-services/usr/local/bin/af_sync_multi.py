@@ -12,52 +12,70 @@ import os
 import time
 import thread
 
-sys.path.append('/home/paco/Projects/RTE/etc/af-sync.d/')
+sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d/')
 import configuration
 
-sys.path.append('/home/paco/Projects/RTE/usr/local/bin/')
+sys.path.append('/home/paco/Projects/RTÉ/audiofile/usr/local/bin/')
 from af_sync_single import AFSingle
+
+logger = logging.getLogger(__name__)
 
 
 class ConfigurationSyntaxError(Exception):
     """ Exception to be raised when it finds an error in the configuration file
     """
-    pass
+    def __init__(self, message):
+        Exception.__init__(self, message)
+        logger.error('An error occurred when reading the configuration. %s',
+                     message)
 
 
 class Server(object):
     """ The server class. It will be started as well as the AFMulti object
     and will receive the commands from the script in /etc/init.d """
     def __init__(self):
+        logger.debug('New server created')
         self.socket = socket.socket()
         self.host = socket.gethostname()
         self.port = configuration.PORT_NUMBER
         self.connection = self.address = None
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.connect()
+        try:
+            self.connect()
+        except socket.error, error:
+            logging.error('An error occurred when connecting the server. %s',
+                          error)
+            raise
 
     def connect(self):
         """ Make the server read for connections coming from clients """
+        logger.debug('Connecting the server')
         self.socket.bind((self.host, self.port))
         self.socket.listen(1)
         self._open_connection()
 
     def _open_connection(self):
         """ Opens a new connections of a client, when one is shut """
+        logger.debug('Opening the connection for the client')
         self.connection, self.address = self.socket.accept()
 
     def _close_client(self):
         """ Close the connection when a client shuts its connectino """
+        logger.debug('Closing the connection due to closing event from the '
+                     'client')
         self.connection.close()
 
     def reopen_connection(self):
         """ Closes a connection and reopens it """
+        logger.debug('Reopening the connection')
         self._close_client()
         self._open_connection()
 
     def read(self):
         """ Waits for the client to send something and returns what it sent """
-        return self.connection.recv(2048)
+        content = self.connection.recv(2048)
+        logger.debug('Received data from the client: %s', content)
+        return content
 
     def close(self):
         """ Closes the server connection """
@@ -100,7 +118,13 @@ class AFMulti(object):
         self.start_server = start_server
         self.server = None
         if start_server:
-            self.server = Server()
+            try:
+                self.server = Server()
+            except socket.error, error:
+                logger.error('An error occurred when starting the server. '
+                             'Traceback: %s', str(error))
+                raise
+
         config_path = config or configuration.CONFIG_PATH
         self.config = self._parse_config(config_path)
         # FIXME: if self.date is None, it means: do not stop at the end of the
@@ -113,6 +137,7 @@ class AFMulti(object):
         """ Run the process of going through all the
         hosts/services/file_formats in the configuration in order to download
         the files """
+        logger.debug('AF Sync Multi Instance running')
         run_host = False
         run_service = False
 
@@ -137,10 +162,10 @@ class AFMulti(object):
                     else:
                         current_record = records[processed]
                         file_name = current_record['file']
-                        logging.info('Processing: Host: %(host)s, '
-                                     'Service: %(service)s, '
-                                     'Format: %(file_format)s,'
-                                     'File: %(file_name)s', locals())
+                        logger.info('Processing: Host: %(host)s, '
+                                    'Service: %(service)s, '
+                                    'Format: %(file_format)s,'
+                                    'File: %(file_name)s', locals())
                         options = {'map_file': map_file}
                         instance = AFSingle(host=host,
                                             file_format=file_format,
@@ -152,12 +177,14 @@ class AFMulti(object):
 
     def fullstatus(self):
         """ Get the full status using the status method """
+        logger.debug('Sending full status to client')
         self.status(full=True)
 
     def status(self, full=False):
         """ Returns the current status.
 
         To do so, we simply return the current config (formatted of course) """
+        logger.debug('Sending status to client')
         output = 'File being processed: %(current_file)s\n' % {
             'current_file': self.target_file
         }
@@ -199,6 +226,7 @@ class AFMulti(object):
 
     def stop(self):
         """ Terminates the program """
+        logger.debug('Sending stop to client')
         self.send('')
         if self.start_server:
             self.server.close()
@@ -206,6 +234,7 @@ class AFMulti(object):
 
     def reload(self):
         """ Reload the configuration """
+        logger.debug('Sending reload to client')
         lock = thread.allocate_lock()
         with lock:
             self.config = self._parse_config(configuration.CONFIG_PATH)
@@ -215,6 +244,7 @@ class AFMulti(object):
     def get_files_to_update(self):
         """ Gets all the files that can be downloaded based on
         the different hosts/service/formats """
+        logging.debug('Getting files to update')
         records_map = {}
         for config in self.config:
             host = config['host']
@@ -234,12 +264,13 @@ class AFMulti(object):
 
         Any duplicates found in the file are removed.
         """
+        logging.debug('Parsing config file')
         try:
             config_file = open(config_path)
             lines = config_file.readlines()
         except IOError:
-            logging.critical('There was a problem opening config file: %s',
-                             config_path)
+            logger.critical('There was a problem opening config file: %s',
+                            config_path)
             sys.exit(os.EX_OSFILE)
 
         config = []
@@ -316,14 +347,15 @@ def get_file_list(host, file_format, service, date):
     """
     url = ('http://%s/webservice/v2/listfiles.php?format=%s&service=%s&date=%s'
            % (host, file_format, service, date))
+    logging.debug('Getting file list at: %s', url)
     req = urllib2.Request(url)
     try:
         resp = urllib2.urlopen(req)
     except urllib2.URLError, error:
         # If a firewall is blocking access, you get: 113, 'No route to host'
-        logging.warning('Received URLError in function: '
-                        'get_file_list(%s, %s, %s, %s): %s',
-                        host, file_format, service, date, error)
+        logger.warning('Received URLError in function: '
+                       'get_file_list(%s, %s, %s, %s): %s',
+                       host, file_format, service, date, error)
         return []
     else:
         decoded = simplejson.loads(resp.read())
@@ -344,7 +376,7 @@ def setup_parser():
 def main(start_server=True):
     """ This function actually runs the program. """
     args = setup_parser()
-    logging.basicConfig(level=logging.DEBUG)
+    #logging.basicConfig(level=logging.DEBUG)
     config_file = args.config_file or configuration.CONFIG_PATH
 
     multi = AFMulti(config_file, start_server=start_server)
@@ -359,7 +391,9 @@ def main(start_server=True):
                 try:
                     method = getattr(multi, content)
                 except AttributeError:
-                    multi.server.send('%s is not a valid command' % content)
+                    string = '%s is not a valid command'
+                    multi.server.send(string % content)
+                    logger.error(string, content)
                     sys.exit(1)
                 method()
     else:
