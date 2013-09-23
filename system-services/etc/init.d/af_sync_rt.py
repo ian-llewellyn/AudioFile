@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
  af-sync-rt   Synchronise audio files from another AudioFile/rotter server
 
@@ -14,10 +15,10 @@ import sys
 from datetime import datetime
 import os
 import optparse
-import logging
+import errno
 
-sys.path.append('/home/paco/Projects/RTE/usr/local/bin/')
-sys.path.append('/home/paco/Projects/RTE/etc/af-sync.d/')
+sys.path.append('/home/paco/Projects/RTÉ/audiofile/usr/local/bin/')
+sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d/')
 import af_sync_multi
 import configuration
 
@@ -45,10 +46,10 @@ class AFDaemon(object):
         self.stop()
         self.start()
 
-    @staticmethod
-    def start(start_server=True):
+    def start(self, start_server=True):
         """ Starts the process """
         af_sync_multi.main(start_server)
+        self.send('OK start')
 
     def status(self):
         """ Send the status command to the server """
@@ -64,6 +65,7 @@ class AFDaemon(object):
 
     def close(self):
         """ Closes the socket to free the port """
+        self.socket.send('')
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
@@ -101,14 +103,7 @@ def main():
 
     parser.add_option('-c', '--config', dest='config_file', type=str, nargs=1)
     parser.add_option('-v', '--verbose', dest='verbosity', type=str, nargs=1)
-    args = parser.parse_args()[0]
 
-    if args.verbosity:
-        try:
-            level = getattr(logging, args.verbosity)
-        except:
-            print('Please specify a good logging level. '
-                  'i.e DEBUG, INFO, WARNING, ERROR, CRITICAL')
     #try:
     #    args = parser.parse_args()[0]
     #except SystemExit:
@@ -145,7 +140,15 @@ def main():
             if action != 'fg':
                 pid = os.fork()
                 if pid == 0:
-                    AFDaemon.start(start_server=True)
+                    try:
+                        daemon.start(start_server=True)
+                    except socket.error as error:
+                        if error.errno == errno.EADDRINUSE:
+                            print('Address already in use. '
+                                  'Daemon already started?')
+                        else:
+                            print error.msg
+                        sys.exit()
     else:
         usage()
         sys.exit(1)
