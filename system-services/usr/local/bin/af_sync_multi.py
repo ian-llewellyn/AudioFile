@@ -19,6 +19,7 @@ sys.path.append('/home/paco/Projects/RTÉ/audiofile/usr/local/bin/')
 from af_sync_single import AFSingle
 
 logger = logging.getLogger(__name__)
+import logging_functions as lf
 
 
 class ConfigurationSyntaxError(Exception):
@@ -222,6 +223,7 @@ class AFMulti(object):
                 output += 'Hostname: %(host)s\n' % locals()
                 output += '\tService: %(service)s\n' % locals()
                 output += '\t\tFormat: %(file_format)s\n' % locals()
+        logging.info(output)
         self.send(output)
 
     def stop(self):
@@ -329,7 +331,7 @@ class AFMulti(object):
         if self.start_server:
             self.server.send(message)
         else:
-            print message
+            logger.debug(message)
 
     def __str__(self):
         return '<AFMulti server: %s, config: %s, date: %s>' % (
@@ -375,6 +377,9 @@ def setup_parser():
 
 def main(start_server=True):
     """ This function actually runs the program. """
+
+    log_dict = lf.get_log_conf()
+    lf.setup_log_handlers(logger, log_dict)
     args = setup_parser()
     #logging.basicConfig(level=logging.DEBUG)
     config_file = args.config_file or configuration.CONFIG_PATH
@@ -393,9 +398,11 @@ def main(start_server=True):
                 except AttributeError:
                     string = '%s is not a valid command'
                     multi.server.send(string % content)
+                    multi.server.send('')
                     logger.error(string, content)
                     sys.exit(1)
-                method()
+                else:
+                    method()
     else:
         multi.run(())
 
