@@ -8,15 +8,22 @@ sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d')
 import configuration as conf
 
 
-def get_log_conf(service, file_format):
+def get_log_conf(service=None, file_format=None):
+    if service and file_format:
+        parameters = '%s-%s' % (service, file_format)
+    elif service or file_format:
+        parameters = '%s' % (service if service else file_format)
+    else:
+        parameters = 'multi'
+
     log_dict = {
         'LOGFILE': {
             'log_level': conf.LOGFILE_LOG_LEVEL,
-            'log_file': conf.LOG_FILE % (service, file_format),
+            'log_file': conf.LOG_FILE % parameters,
         },
         'LOGFILE DEBUG': {
             'log_level': conf.LOGFILE_DEBUG_LOG_LEVEL,
-            'log_file': conf.DEBUG_LOG_FILE % (service, file_format),
+            'log_file': conf.DEBUG_LOG_FILE % parameters,
         },
         'STDERR': {
             'log_level': conf.STDERR_LOG_LEVEL,
@@ -28,7 +35,6 @@ def get_log_conf(service, file_format):
             'log_format': conf.LOG_FORMAT
         }
     }
-    print log_dict
     return log_dict
 
 
