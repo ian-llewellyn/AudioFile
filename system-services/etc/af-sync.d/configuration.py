@@ -7,11 +7,12 @@ import logging
 import datetime
 
 LOG_FORMAT = '[%(asctime)s] %(process)d %(levelname)s: %(message)s'
-LOG_FILE = '/var/log/audiofile/af-sync-%s-%s.log'
-DEBUG_LOG_FILE = '/var/log/audiofile/af-sync-%s-%s_debug.log'
+LOG_FILE = '/var/log/audiofile/af-sync-%s.log'
+DEBUG_LOG_FILE = '/var/log/audiofile/af-sync-%s_debug.log'
 
 # Logging
-ADMIN_EMAILS = ['Ian.Llewellyn@rte.ie', 'radiomnt@rte.ie']
+#ADMIN_EMAILS = ['Ian.Llewellyn@rte.ie', 'radiomnt@rte.ie']
+ADMIN_EMAILS = ['francois.ribemont@gmail.com']
 STDERR_LOG_LEVEL = logging.DEBUG
 LOGFILE_LOG_LEVEL = logging.INFO
 LOGFILE_DEBUG_LOG_LEVEL = logging.DEBUG
