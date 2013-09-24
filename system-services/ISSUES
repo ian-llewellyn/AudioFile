@@ -1,0 +1,6 @@
+========[ ISSUES ]========
+* DEBUG messages coming out of af_sync_single.py when run with -v INFO
+
+
+========[ FIXED ]=========
+
