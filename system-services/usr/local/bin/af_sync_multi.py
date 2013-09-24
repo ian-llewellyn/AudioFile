@@ -234,12 +234,12 @@ class AFMulti(object):
             self.server.close()
             thread.exit()
 
-    def reload(self):
+    def reload(self, lock):
         """ Reload the configuration """
         logger.debug('Sending reload to client')
-        lock = thread.allocate_lock()
-        with lock:
-            self.config = self._parse_config(configuration.CONFIG_PATH)
+        lock.acquire()
+        self.config = self._parse_config(configuration.CONFIG_PATH)
+        lock.release()
         message = 'Configuration has been loaded'
         self.server.send(message)
 
@@ -387,7 +387,8 @@ def main(start_server=True):
     multi = AFMulti(config_file, start_server=start_server)
 
     if start_server:
-        my_thread = thread.start_new_thread(multi.run, (None,))
+        lock = thread.allocate_lock()
+        my_thread = thread.start_new_thread(multi.run, (lock,))
         while my_thread:
             content = multi.server.read()
             if not content:
@@ -402,7 +403,10 @@ def main(start_server=True):
                     logger.error(string, content)
                     sys.exit(1)
                 else:
-                    method()
+                    if content == 'reload':
+                        method(lock)
+                    else:
+                        method()
     else:
         multi.run(())
 
