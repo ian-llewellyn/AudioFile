@@ -17,8 +17,8 @@ import os
 import optparse
 import errno
 
-sys.path.append('/home/paco/Projects/RTÉ/audiofile/usr/local/bin/')
-sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d/')
+sys.path.append('/usr/local/bin/')
+sys.path.append('/etc/af-sync.d/')
 import af_sync_multi
 import configuration
 

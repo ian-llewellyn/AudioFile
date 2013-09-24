@@ -12,12 +12,12 @@ import optparse
 import logging
 import logging.handlers
 
-sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d')
+sys.path.append('/etc/af-sync.d')
 import configuration
 
 logger = logging.getLogger(__name__)
 
-sys.path.append('/home/paco/Projects/RTÉ/audiofile/usr/local/lib')
+sys.path.append('/usr/local/lib')
 import logging_functions as lf
 
 

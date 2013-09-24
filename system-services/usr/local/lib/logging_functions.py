@@ -4,7 +4,7 @@
 import logging
 import sys
 
-sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d')
+sys.path.append('/etc/af-sync.d')
 import configuration as conf
 
 

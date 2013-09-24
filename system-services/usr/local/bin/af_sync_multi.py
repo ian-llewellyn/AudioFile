@@ -12,10 +12,10 @@ import os
 import time
 import thread
 
-sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d/')
+sys.path.append('/etc/af-sync.d/')
 import configuration
 
-sys.path.append('/home/paco/Projects/RTÉ/audiofile/usr/local/bin/')
+sys.path.append('/usr/local/bin/')
 from af_sync_single import AFSingle
 
 logger = logging.getLogger(__name__)
