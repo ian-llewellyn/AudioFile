@@ -148,7 +148,7 @@ def main():
                                   'Daemon already started?')
                         else:
                             print error.msg
-                        sys.exit()
+                        sys.exit(0)
     else:
         usage()
         sys.exit(1)
