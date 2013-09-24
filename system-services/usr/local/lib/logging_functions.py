@@ -12,7 +12,7 @@ def get_log_conf(service=None, file_format=None):
     if service and file_format:
         parameters = '%s-%s' % (service, file_format)
     elif service or file_format:
-        parameters = '%s' % (service if service else file_format)
+        parameters = '%s' % (service and service or file_format)
     else:
         parameters = 'multi'
 

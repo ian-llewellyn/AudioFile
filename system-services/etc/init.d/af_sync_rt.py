@@ -1,5 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+#
+# af-sync-rt   Synchronise audio files from another AudioFile/rotter server
+#
+# chkconfig: 345 30 70
+# description: Starts a multitude of processes to synchronise files for \
+#              format and service from a given HTTP webserver.
+#
 """
  af-sync-rt   Synchronise audio files from another AudioFile/rotter server
 
