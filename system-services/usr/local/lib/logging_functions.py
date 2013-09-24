@@ -38,31 +38,37 @@ def get_log_conf(service=None, file_format=None):
     return log_dict
 
 
-def setup_log_handlers(logger, log_dict, logger_level=logging.DEBUG):
+def setup_log_handlers(logger, log_dict):
     """ Sets up the log handlers """
 
     # Otherwise it filters the DEBUG and INFO messages
-    logger.setLevel(logger_level)
+    if log_dict['STDERR']['log_level'] is not None:
+        logger.setLevel(log_dict['LOGFILE']['log_level'])
 
     # FILE HANDLER
-    file_handler = logging.FileHandler(log_dict['LOGFILE']['log_file'])
-    file_handler.setLevel(log_dict['LOGFILE']['log_level'])
-    formatter = logging.Formatter(log_dict['GENERAL']['log_format'])
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    if log_dict['LOGFILE']['log_level'] is not None:
+        file_handler = logging.FileHandler(log_dict['LOGFILE']['log_file'])
+        file_handler.setLevel(log_dict['LOGFILE']['log_level'])
+        formatter = logging.Formatter(log_dict['GENERAL']['log_format'])
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     # DEBUG FILE HANDLER
-    file_handler = logging.FileHandler(log_dict['LOGFILE DEBUG']['log_file'])
-    file_handler.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
-    formatter = logging.Formatter(log_dict['GENERAL']['log_format'])
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    if log_dict['LOGFILE DEBUG']['log_level'] is not None:
+        file_handler = logging.FileHandler(
+            log_dict['LOGFILE DEBUG']['log_file']
+        )
+        file_handler.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
+        formatter = logging.Formatter(log_dict['GENERAL']['log_format'])
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     # STDERR HANDLER
-    stderr_handler = logging.StreamHandler(sys.stdout)
-    stderr_handler.setLevel(log_dict['STDERR']['log_level'])
-    stderr_handler.setFormatter(formatter)
-    logger.addHandler(stderr_handler)
+    if log_dict['STDERR']['log_level'] is not None:
+        stderr_handler = logging.StreamHandler(sys.stdout)
+        stderr_handler.setLevel(log_dict['STDERR']['log_level'])
+        stderr_handler.setFormatter(formatter)
+        logger.addHandler(stderr_handler)
 
     #email_handler = logging.handlers.SMTPHandler(
     #    'localhost',
