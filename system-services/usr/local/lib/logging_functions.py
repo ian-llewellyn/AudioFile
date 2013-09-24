@@ -8,13 +8,13 @@ sys.path.append('/etc/af-sync.d')
 import configuration as conf
 
 
-def get_log_conf(service=None, file_format=None):
+def get_log_conf(service=None, file_format=None, name=None):
     if service and file_format:
         parameters = '%s-%s' % (service, file_format)
-    elif service or file_format:
-        parameters = '%s' % (service and service or file_format)
-    else:
+    elif name is not None:
         parameters = 'multi'
+    else:
+        parameters = '%s'
 
     log_dict = {
         'LOGFILE': {
@@ -45,11 +45,11 @@ def setup_log_handlers(logger, log_dict):
     if log_dict['STDERR']['log_level'] is not None:
         logger.setLevel(log_dict['LOGFILE']['log_level'])
 
+    formatter = logging.Formatter(log_dict['GENERAL']['log_format'])
     # FILE HANDLER
     if log_dict['LOGFILE']['log_level'] is not None:
         file_handler = logging.FileHandler(log_dict['LOGFILE']['log_file'])
         file_handler.setLevel(log_dict['LOGFILE']['log_level'])
-        formatter = logging.Formatter(log_dict['GENERAL']['log_format'])
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 

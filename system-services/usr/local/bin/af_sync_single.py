@@ -21,7 +21,7 @@ import logging_functions as lf
 
 class AFSingle(object):
     """ Single process. It creates deltas objects """
-    def __init__(self, host, service, file_format, record, logger,
+    def __init__(self, host, service, file_format, record, log_dict,
                  options=None):
         """ Constructor of the class. Parameters:
             - host: string that represents the hostname
@@ -33,8 +33,6 @@ class AFSingle(object):
                 and won't do anything about the other keys
         """
 
-        self.logger = logger
-        logger.debug('Creating new instance of AFSingle')
         self.deltas = []
         self.host = host
         self.file_format = file_format
@@ -56,6 +54,38 @@ class AFSingle(object):
                                     self.filename,
                                     self.file_format,
                                     self.service)
+        logger_name = '%(service)s-%(file_format)s' % locals()
+        self.logger = logging.getLogger(logger_name)
+
+        self.logger.setLevel(log_dict['STDERR']['log_level'])
+
+        if logger_name not in [e.name for e in self.logger.handlers]:
+            self.logger = add_handler(
+                logger=self.logger,
+                name='%(service)s-%(file_format)s' % locals(),
+                handler_key='file',
+                level=log_dict['LOGFILE']['log_level'],
+                log_format=log_dict['GENERAL']['log_format'],
+                option=log_dict['LOGFILE']['log_file']
+            )
+
+            self.logger = add_handler(
+                logger=self.logger,
+                name='%(service)s-%(file_format)s' % locals(),
+                handler_key='file debug',
+                level=log_dict['LOGFILE DEBUG']['log_level'],
+                log_format=log_dict['GENERAL']['log_format'],
+                option=log_dict['LOGFILE DEBUG']['log_file']
+            )
+
+            self.logger = add_handler(
+                logger=self.logger,
+                name='%(service)s-%(file_format)s' % locals(),
+                handler_key='stream',
+                level=log_dict['STDERR']['log_level'],
+                log_format=log_dict['GENERAL']['log_format']
+            )
+            self.logger.debug('Creating new instance of AFSingle')
 
     def process(self):
         """ Process the single instance """
@@ -159,9 +189,6 @@ class AFSingle(object):
             self.logger.exception('Caught unhandled exception')
             raise
 
-    def setup_log(self, logger):
-        pass
-
 
 ## Global Function Definitions
 class Delta(object):
@@ -259,7 +286,7 @@ class Delta(object):
         return True
 
 
-def add_handler(logger, handler_key, level, log_format, option=None):
+def add_handler(logger, name, handler_key, level, log_format, option=None):
     handlers_mapping = {
         'file': logging.FileHandler,
         'email': logging.handlers.SMTPHandler,
@@ -271,6 +298,7 @@ def add_handler(logger, handler_key, level, log_format, option=None):
     else:
         handler = handlers_mapping[handler_key]()
     handler.setLevel(level)
+    handler.name = name
     formatter = logging.Formatter(log_format)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
@@ -378,27 +406,8 @@ def test():
                              'DEBUG, INFO, WARNING, ERROR or CRITICAL')
             sys.exit()
         else:
-            log_dict['STDERR']['log_level'] = log_level
+            log_dict['LOGFILE DEBUG']['log_level'] = log_level
 
-    logger_name = ('%(host)s-%(service)s-%(file_format)s'
-                   % locals())
-    logger = logging.getLogger(logger_name)
-
-    logger.setLevel(log_dict['STDERR']['log_level'])
-
-    logger = add_handler(logger, 'file',
-                         log_dict['LOGFILE']['log_level'],
-                         log_dict['GENERAL']['log_format'],
-                         option=log_dict['LOGFILE']['log_file'])
-
-    logger = add_handler(logger, 'file debug',
-                         log_dict['LOGFILE DEBUG']['log_level'],
-                         log_dict['GENERAL']['log_format'],
-                         option=log_dict['LOGFILE DEBUG']['log_file'])
-
-    logger = add_handler(logger, 'stream',
-                         log_dict['STDERR']['log_level'],
-                         log_dict['GENERAL']['log_format'])
     #lf.setup_log_handlers(logger, log_dict)
     ## System Integrity Checks
     # Bail out early if the target directory doesn't exist.
@@ -431,8 +440,9 @@ def test():
                             file_format=file_format,
                             record=record,
                             options=options,
-                            logger=logger)
+                            log_dict=log_dict)
         instance.process()
+        del(instance)
 
 if __name__ == '__main__':
     import af_sync_multi

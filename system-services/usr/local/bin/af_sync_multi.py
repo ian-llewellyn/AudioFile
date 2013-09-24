@@ -18,7 +18,6 @@ import configuration
 sys.path.append('/usr/local/bin/')
 from af_sync_single import AFSingle
 
-logger = logging.getLogger(__name__)
 import logging_functions as lf
 
 
@@ -27,15 +26,15 @@ class ConfigurationSyntaxError(Exception):
     """
     def __init__(self, message):
         Exception.__init__(self, message)
-        logger.error('An error occurred when reading the configuration. %s',
-                     message)
 
 
 class Server(object):
     """ The server class. It will be started as well as the AFMulti object
     and will receive the commands from the script in /etc/init.d """
     def __init__(self):
-        logger.debug('New server created')
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug('New server created')
+
         self.socket = socket.socket()
         self.host = socket.gethostname()
         self.port = configuration.PORT_NUMBER
@@ -50,32 +49,32 @@ class Server(object):
 
     def connect(self):
         """ Make the server read for connections coming from clients """
-        logger.debug('Connecting the server')
+        self.logger.debug('Connecting the server')
         self.socket.bind((self.host, self.port))
         self.socket.listen(1)
         self._open_connection()
 
     def _open_connection(self):
         """ Opens a new connections of a client, when one is shut """
-        logger.debug('Opening the connection for the client')
+        self.logger.debug('Opening the connection for the client')
         self.connection, self.address = self.socket.accept()
 
     def _close_client(self):
         """ Close the connection when a client shuts its connectino """
-        logger.debug('Closing the connection due to closing event from the '
-                     'client')
+        self.logger.debug('Closing the connection due to closing event '
+                          'from the client')
         self.connection.close()
 
     def reopen_connection(self):
         """ Closes a connection and reopens it """
-        logger.debug('Reopening the connection')
+        self.logger.debug('Reopening the connection')
         self._close_client()
         self._open_connection()
 
     def read(self):
         """ Waits for the client to send something and returns what it sent """
         content = self.connection.recv(2048)
-        logger.debug('Received data from the client: %s', content)
+        self.logger.debug('Received data from the client: %s', content)
         return content
 
     def close(self):
@@ -97,7 +96,7 @@ class AFMulti(object):
     """ The class that handles all the instances.
     It reads the configuration file, and then starts the AF_Single instances
     """
-    def __init__(self, config=None, start_server=False):
+    def __init__(self, log_dict, config=None, start_server=False):
         """
         self.config is a dictionnary which has this format:
             host1
@@ -122,8 +121,8 @@ class AFMulti(object):
             try:
                 self.server = Server()
             except socket.error, error:
-                logger.error('An error occurred when starting the server. '
-                             'Traceback: %s', str(error))
+                self.logger.error('An error occurred when starting the server.'
+                                  ' Traceback: %s', str(error))
                 raise
 
         config_path = config or configuration.CONFIG_PATH
@@ -134,11 +133,15 @@ class AFMulti(object):
         self.date = configuration.DATE
         self.target_file = ''
 
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
+        self.log_dict = log_dict
+
     def run(self, args):
         """ Run the process of going through all the
         hosts/services/file_formats in the configuration in order to download
         the files """
-        logger.debug('AF Sync Multi Instance running')
+        self.logger.debug('AF Sync Multi Instance running')
         run_host = False
         run_service = False
 
@@ -163,29 +166,30 @@ class AFMulti(object):
                     else:
                         current_record = records[processed]
                         file_name = current_record['file']
-                        logger.info('Processing: Host: %(host)s, '
-                                    'Service: %(service)s, '
-                                    'Format: %(file_format)s,'
-                                    'File: %(file_name)s', locals())
+                        self.logger.info('Processing: Host: %(host)s, '
+                                         'Service: %(service)s, '
+                                         'Format: %(file_format)s, '
+                                         'File: %(file_name)s', locals())
                         options = {'map_file': map_file}
                         instance = AFSingle(host=host,
                                             file_format=file_format,
                                             service=service,
                                             record=current_record,
-                                            options=options)
+                                            options=options,
+                                            log_dict=self.log_dict)
                         self.target_file = instance.target_file
                         instance.process()
 
     def fullstatus(self):
         """ Get the full status using the status method """
-        logger.debug('Sending full status to client')
+        self.logger.debug('Sending full status to client')
         self.status(full=True)
 
     def status(self, full=False):
         """ Returns the current status.
 
         To do so, we simply return the current config (formatted of course) """
-        logger.debug('Sending status to client')
+        self.logger.debug('Sending status to client')
         output = 'File being processed: %(current_file)s\n' % {
             'current_file': self.target_file
         }
@@ -223,12 +227,12 @@ class AFMulti(object):
                 output += 'Hostname: %(host)s\n' % locals()
                 output += '\tService: %(service)s\n' % locals()
                 output += '\t\tFormat: %(file_format)s\n' % locals()
-        logging.info(output)
+        self.logger.info(output)
         self.send(output)
 
     def stop(self):
         """ Terminates the program """
-        logger.debug('Sending stop to client')
+        self.logger.debug('Sending stop to client')
         self.send('')
         if self.start_server:
             self.server.close()
@@ -236,7 +240,7 @@ class AFMulti(object):
 
     def reload(self, lock):
         """ Reload the configuration """
-        logger.debug('Sending reload to client')
+        self.logger.debug('Sending reload to client')
         lock.acquire()
         self.config = self._parse_config(configuration.CONFIG_PATH)
         lock.release()
@@ -271,8 +275,8 @@ class AFMulti(object):
             config_file = open(config_path)
             lines = config_file.readlines()
         except IOError:
-            logger.critical('There was a problem opening config file: %s',
-                            config_path)
+            self.logger.critical('There was a problem opening config file: %s',
+                                 config_path)
             sys.exit(os.EX_OSFILE)
 
         config = []
@@ -331,7 +335,7 @@ class AFMulti(object):
         if self.start_server:
             self.server.send(message)
         else:
-            logger.debug(message)
+            self.logger.debug(message)
 
     def __str__(self):
         return '<AFMulti server: %s, config: %s, date: %s>' % (
@@ -347,6 +351,7 @@ def get_file_list(host, file_format, service, date):
     Returns an array from the directory listing received by a HTTP call such
     as: http://host/format/service/date/
     """
+    logger = logging.getLogger(__name__)
     url = ('http://%s/webservice/v2/listfiles.php?format=%s&service=%s&date=%s'
            % (host, file_format, service, date))
     logging.debug('Getting file list at: %s', url)
@@ -371,20 +376,20 @@ def setup_parser():
     parser = optparse.OptionParser()
 
     parser.add_option('-c', '--config', dest='config_file', type=str, nargs=1)
-    parser.add_option('-v', '--verbose', dest='verbosity', type=int, nargs=1)
+    parser.add_option('-v', '--verbose', dest='verbosity', type=str, nargs=1)
     return parser.parse_args()[0]
 
 
 def main(start_server=True):
     """ This function actually runs the program. """
-
+    logger = logging.getLogger(__name__)
     log_dict = lf.get_log_conf()
-    lf.setup_log_handlers(logger, log_dict)
     args = setup_parser()
-    #logging.basicConfig(level=logging.DEBUG)
+    lf.setup_log_handlers(logger, log_dict)
     config_file = args.config_file or configuration.CONFIG_PATH
 
-    multi = AFMulti(config_file, start_server=start_server)
+    multi = AFMulti(config=config_file, log_dict=log_dict,
+                    start_server=start_server)
 
     if start_server:
         lock = thread.allocate_lock()
