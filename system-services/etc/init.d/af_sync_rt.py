@@ -122,7 +122,12 @@ def main():
     if action:
         daemon = AFDaemon(configuration.PORT_NUMBER)
         if action not in ('fg', 'start', 'restart'):
-            daemon.connect()
+            try:
+                daemon.connect()
+            except socket.error as error:
+                if error.errno == errno.ECONNREFUSED:
+                    print 'Connection refused. Have you started the server?'
+                    sys.exit(0)
             try:
                 getattr(daemon, action)()
             except AttributeError:
@@ -132,10 +137,17 @@ def main():
             if response:
                 print response
         elif action == 'fg':
-            AFDaemon.start(start_server=False)
+            daemon.start(start_server=False)
         else:
             if action == 'restart':
-                daemon.connect()
+                try:
+                    daemon.connect()
+                except socket.error as error:
+                    if error.errno == errno.ECONNREFUSED:
+                        print('Connection refused. Have you started '
+                              'the server?')
+                        sys.exit(0)
+
                 daemon.stop()
             if action != 'fg':
                 pid = os.fork()
