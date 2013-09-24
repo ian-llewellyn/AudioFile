@@ -15,15 +15,14 @@ import logging.handlers
 sys.path.append('/etc/af-sync.d')
 import configuration
 
-logger = logging.getLogger(__name__)
-
 sys.path.append('/usr/local/lib')
 import logging_functions as lf
 
 
 class AFSingle(object):
     """ Single process. It creates deltas objects """
-    def __init__(self, host, service, file_format, record, options=None):
+    def __init__(self, host, service, file_format, record, logger,
+                 options=None):
         """ Constructor of the class. Parameters:
             - host: string that represents the hostname
             - file_format: a string that represents the file format (mp2, mp3)
@@ -34,8 +33,7 @@ class AFSingle(object):
                 and won't do anything about the other keys
         """
 
-        log_dict = lf.get_log_conf(service, file_format)
-        lf.setup_log_handlers(logger, log_dict)
+        self.logger = logger
         logger.debug('Creating new instance of AFSingle')
         self.deltas = []
         self.host = host
@@ -69,8 +67,8 @@ class AFSingle(object):
             # For ease...
             if not self.target_file:
                 # I can't possibly go on - I have no target!
-                logger.warning('file_map returned no target file '
-                               'for source file: %s', self.filename)
+                self.logger.warning('file_map returned no target file '
+                                    'for source file: %s', self.filename)
                 return
 
             # Reset variable for each file that's encountered
@@ -81,7 +79,7 @@ class AFSingle(object):
                and self.target_file not in recent_truncations):
                 # A map file is being used, empty this file
                 # (it hasn't been done in over a day!)
-                logger.info('Truncated target file: %s', self.target_file)
+                self.logger.info('Truncated target file: %s', self.target_file)
                 try:
                     open(self.target_file, 'w').truncate()
                 except IOError:
@@ -96,14 +94,14 @@ class AFSingle(object):
                  and self.size == os.stat(self.target_file).st_size):
                 # Source and target files have the same size,
                 # so target is probably fully up-to-date
-                logger.info('Target File: %s has same size as '
-                            'Source File: %s', self.target_file,
-                            self.filename)
+                self.logger.info('Target File: %s has same size as '
+                                 'Source File: %s', self.target_file,
+                                 self.filename)
                 return
 
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
-            logger.info('Target File: %s started', self.target_file)
+            self.logger.info('Target File: %s started', self.target_file)
             req_uri = ('http://%(host)s/audio/%(file_format)s/%(service)s'
                        '/%(date)s/%(filename)s' %
                        {'host': self.host,
@@ -112,60 +110,65 @@ class AFSingle(object):
                         'date': self.date,
                         'filename': self.filename})
 
-            delta = Delta(req_uri, self.target_file, self.operation)
+            delta = Delta(req_uri, self.target_file, operation=self.operation,
+                          logger=self.logger)
             while delta_failures <= configuration.DELTA_RETRIES:
                 while delta.fetch():
                     # Successful update - reset failure count and sleep
                     delta_failures = 0
                     no_progress_sleep_time = 0
-                    logger.debug('Delta success - About to sleep '
-                                 'for %d ms',
-                                 configuration.INTER_DELTA_SLEEP_TIME)
+                    self.logger.debug('Delta success - About to sleep '
+                                      'for %d ms',
+                                      configuration.INTER_DELTA_SLEEP_TIME)
                     time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
 
                 # Unsuccessful update - mark as a failure and sleep
                 delta_failures += 1
-                logger.debug('Delta failed %d time(s) '
-                             '- About to sleep for %d ms',
-                             delta_failures,
-                             configuration.INTER_DELTA_SLEEP_TIME)
+                self.logger.debug('Delta failed %d time(s) '
+                                  '- About to sleep for %d ms',
+                                  delta_failures,
+                                  configuration.INTER_DELTA_SLEEP_TIME)
                 time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
 
             # (at least once an hour - more if errors)
-            logger.info('Delta retries: %d exceeded',
-                        configuration.DELTA_RETRIES)
+            self.logger.info('Delta retries: %d exceeded',
+                             configuration.DELTA_RETRIES)
             delta.tgt_fp.close()
             delta.tgt_fp = None
 
             # If a date was passed in, then exit now
             if self.date:
-                logger.info('No more updates for date: %s - Exiting',
-                            self.date)
+                self.logger.info('No more updates for date: %s - Exiting',
+                                 self.date)
                 return
 
             # If no progress is made, we don't want the script going
             # to 100% CPU. Back off..
             if no_progress_sleep_time > configuration.NO_PROGRESS_SLEEP_TIME:
                 no_progress_sleep_time = configuration.NO_PROGRESS_SLEEP_TIME
-                logger.warning('no_progress_sleep_time hit max. '
-                               'About to sleep for %d ms',
-                               no_progress_sleep_time)
+                self.logger.warning('no_progress_sleep_time hit max. '
+                                    'About to sleep for %d ms',
+                                    no_progress_sleep_time)
             else:
-                logger.info('No progress - About to sleep for %d ms',
-                            no_progress_sleep_time)
+                self.logger.info('No progress - About to sleep for %d ms',
+                                 no_progress_sleep_time)
 
             time.sleep(no_progress_sleep_time / 1000)
             no_progress_sleep_time = (no_progress_sleep_time * 2) + 1000
         except:
-            logger.exception('Caught unhandled exception')
+            self.logger.exception('Caught unhandled exception')
             raise
+
+    def setup_log(self, logger):
+        pass
 
 
 ## Global Function Definitions
 class Delta(object):
     """ Delta class that fetches the data from the server """
-    def __init__(self, uri, target_file, operation=True):
+    def __init__(self, uri, target_file, logger, operation=True):
         """ Constructor. It needs a URI, and a target file """
+        self.logger = logger
         self.uri = uri
         self.target_file = target_file
         self.operation = operation
@@ -186,23 +189,23 @@ class Delta(object):
         self.tgt_fp.seek(0, 2)
         # How many bytes have we got already?
         offset = self.tgt_fp.tell()
-        logger.debug('File: %s has size: %d', self.target_file, offset)
+        self.logger.debug('File: %s has size: %d', self.target_file, offset)
 
         http_req = urllib2.Request(self.uri)
         # Only get updates - THIS IS THE MAGIC
         http_req.headers['Range'] = 'bytes=%s-' % offset
 
-        logger.debug('Requesting: %s', self.uri)
+        self.logger.debug('Requesting: %s', self.uri)
         try:
             http_resp = urllib2.urlopen(http_req)
         except urllib2.HTTPError, error:
-            logger.warning('Received HTTP error: %d - %s',
-                           error.code, error.reason)
+            self.logger.warning('Received HTTP error: %d - %s',
+                                error.code, error.reason)
             # We know about only one type of HTTP error
             # we can recover from - A 416
             if error.code != 416:
-                logger.exception('Can\'t handle HTTP error: %d - %s',
-                                 error.code, error.reason)
+                self.logger.exception('Can\'t handle HTTP error: %d - %s',
+                                      error.code, error.reason)
                 raise
             # Certain servers produce
             # HTTP 416: Requested Range Not Satisfiable responses
@@ -211,9 +214,9 @@ class Delta(object):
         except urllib2.URLError, error:
             # If a firewall is blocking access, you get:
             # 113, 'No route to host'
-            logger.warning('Received URLError in function: '
-                           'fetch_delta(%s, %s): %s',
-                           self.uri, self.target_file, error)
+            self.logger.warning('Received URLError in function: '
+                                'fetch_delta(%s, %s): %s',
+                                self.uri, self.target_file, error)
             return False
         else:
             data_length = int(http_resp.headers.getheader('content-length'))
@@ -232,16 +235,16 @@ class Delta(object):
         # TODO:
         # 3 conditions
         if (offset != 0 and resp_code != 206) or data_length <= 0:
-            logger.info('Delta failure %d: Offset: %d '
-                        'HTTP_STATUS_CODE: %d data_length: %d',
-                        self.failures + 1, offset, resp_code, data_length)
+            self.logger.info('Delta failure %d: Offset: %d '
+                             'HTTP_STATUS_CODE: %d data_length: %d',
+                             self.failures + 1, offset, resp_code, data_length)
             return False
 
         # No operation
         if not self.operation:
-            logger.info('Dry run %d: Offset: %d '
-                        'HTTP_STATUS_CODE: %d data_length: %d',
-                        self.failures + 1, offset, resp_code, data_length)
+            self.logger.info('Dry run %d: Offset: %d '
+                             'HTTP_STATUS_CODE: %d data_length: %d',
+                             self.failures + 1, offset, resp_code, data_length)
             return False
 
         # Write the update and flush to disk
@@ -251,9 +254,27 @@ class Delta(object):
             self.tgt_fp.write(chunk)
             self.tgt_fp.flush()
 
-        logger.debug('Delta success: HTTP_STATUS_CODE: %d data_length: %d',
-                     resp_code, data_length)
+        self.logger.debug('Delta success: HTTP_STATUS_CODE: %d '
+                          'data_length: %d', resp_code, data_length)
         return True
+
+
+def add_handler(logger, handler_key, level, log_format, option=None):
+    handlers_mapping = {
+        'file': logging.FileHandler,
+        'email': logging.handlers.SMTPHandler,
+        'file debug': logging.FileHandler,
+        'stream': logging.StreamHandler
+    }
+    if option is not None:
+        handler = handlers_mapping[handler_key](option)
+    else:
+        handler = handlers_mapping[handler_key]()
+    handler.setLevel(level)
+    formatter = logging.Formatter(log_format)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
 
 
 ## Local Function Definitions
@@ -353,20 +374,39 @@ def test():
         try:
             log_level = getattr(logging, args.verbosity.upper())
         except AttributeError:
-            logger.critical('Please provide a good verbosity option: '
-                            'DEBUG, INFO, WARNING, ERROR or CRITICAL')
+            logging.critical('Please provide a good verbosity option: '
+                             'DEBUG, INFO, WARNING, ERROR or CRITICAL')
             sys.exit()
         else:
             log_dict['STDERR']['log_level'] = log_level
 
-    lf.setup_log_handlers(logger, log_dict)
+    logger_name = ('%(host)s-%(service)s-%(file_format)s'
+                   % locals())
+    logger = logging.getLogger(logger_name)
+
+    logger.setLevel(log_dict['STDERR']['log_level'])
+
+    logger = add_handler(logger, 'file',
+                         log_dict['LOGFILE']['log_level'],
+                         log_dict['GENERAL']['log_format'],
+                         option=log_dict['LOGFILE']['log_file'])
+
+    logger = add_handler(logger, 'file debug',
+                         log_dict['LOGFILE DEBUG']['log_level'],
+                         log_dict['GENERAL']['log_format'],
+                         option=log_dict['LOGFILE DEBUG']['log_file'])
+
+    logger = add_handler(logger, 'stream',
+                         log_dict['STDERR']['log_level'],
+                         log_dict['GENERAL']['log_format'])
+    #lf.setup_log_handlers(logger, log_dict)
     ## System Integrity Checks
     # Bail out early if the target directory doesn't exist.
     # Only happens if a map file is not being used.
     if(not args.map_file
        and not os.path.exists(configuration.AUDIOFILE_DAY_CACHE_STORAGE)):
-        logger.critical('AUDIOFILE_DAY_CACHE_STORAGE: %s does not exist',
-                        configuration.AUDIOFILE_DAY_CACHE_STORAGE)
+        logging.critical('AUDIOFILE_DAY_CACHE_STORAGE: %s does not exist',
+                         configuration.AUDIOFILE_DAY_CACHE_STORAGE)
         sys.exit(os.EX_OSFILE)
 
     #NO_OP = args.noop
@@ -389,7 +429,9 @@ def test():
     for record in records:
         instance = AFSingle(host=host, service=service,
                             file_format=file_format,
-                            record=record, options=options)
+                            record=record,
+                            options=options,
+                            logger=logger)
         instance.process()
 
 if __name__ == '__main__':
