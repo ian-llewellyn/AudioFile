@@ -21,7 +21,7 @@ import logging_functions as lf
 
 class AFSingle(object):
     """ Single process. It creates deltas objects """
-    def __init__(self, host, service, file_format, record, log_dict,
+    def __init__(self, host, service, file_format, record, logger,
                  options=None):
         """ Constructor of the class. Parameters:
             - host: string that represents the hostname
@@ -54,38 +54,8 @@ class AFSingle(object):
                                     self.filename,
                                     self.file_format,
                                     self.service)
-        logger_name = '%(service)s-%(file_format)s' % locals()
-        self.logger = logging.getLogger(logger_name)
 
-        self.logger.setLevel(log_dict['STDERR']['log_level'])
-
-        if logger_name not in [e.name for e in self.logger.handlers]:
-            self.logger = add_handler(
-                logger=self.logger,
-                name='%(service)s-%(file_format)s' % locals(),
-                handler_key='file',
-                level=log_dict['LOGFILE']['log_level'],
-                log_format=log_dict['GENERAL']['log_format'],
-                option=log_dict['LOGFILE']['log_file']
-            )
-
-            self.logger = add_handler(
-                logger=self.logger,
-                name='%(service)s-%(file_format)s' % locals(),
-                handler_key='file debug',
-                level=log_dict['LOGFILE DEBUG']['log_level'],
-                log_format=log_dict['GENERAL']['log_format'],
-                option=log_dict['LOGFILE DEBUG']['log_file']
-            )
-
-            self.logger = add_handler(
-                logger=self.logger,
-                name='%(service)s-%(file_format)s' % locals(),
-                handler_key='stream',
-                level=log_dict['STDERR']['log_level'],
-                log_format=log_dict['GENERAL']['log_format']
-            )
-            self.logger.debug('Creating new instance of AFSingle')
+        self.logger = logger
 
     def process(self):
         """ Process the single instance """
@@ -140,6 +110,8 @@ class AFSingle(object):
                         'date': self.date,
                         'filename': self.filename})
 
+            # The Delta object is the object that will
+            # actually download the data
             delta = Delta(req_uri, self.target_file, operation=self.operation,
                           logger=self.logger)
             while delta_failures <= configuration.DELTA_RETRIES:
@@ -163,8 +135,8 @@ class AFSingle(object):
             # (at least once an hour - more if errors)
             self.logger.info('Delta retries: %d exceeded',
                              configuration.DELTA_RETRIES)
+            # Here we close the file
             delta.tgt_fp.close()
-            delta.tgt_fp = None
 
             # If a date was passed in, then exit now
             if self.date:
@@ -183,6 +155,7 @@ class AFSingle(object):
                 self.logger.info('No progress - About to sleep for %d ms',
                                  no_progress_sleep_time)
 
+            # TODO: move to af_sync_multi
             time.sleep(no_progress_sleep_time / 1000)
             no_progress_sleep_time = (no_progress_sleep_time * 2) + 1000
         except:
@@ -284,25 +257,6 @@ class Delta(object):
         self.logger.debug('Delta success: HTTP_STATUS_CODE: %d '
                           'data_length: %d', resp_code, data_length)
         return True
-
-
-def add_handler(logger, name, handler_key, level, log_format, option=None):
-    handlers_mapping = {
-        'file': logging.FileHandler,
-        'email': logging.handlers.SMTPHandler,
-        'file debug': logging.FileHandler,
-        'stream': logging.StreamHandler
-    }
-    if option is not None:
-        handler = handlers_mapping[handler_key](option)
-    else:
-        handler = handlers_mapping[handler_key]()
-    handler.setLevel(level)
-    handler.name = name
-    formatter = logging.Formatter(log_format)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
 
 
 ## Local Function Definitions

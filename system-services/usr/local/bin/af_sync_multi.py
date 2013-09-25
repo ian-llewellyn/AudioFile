@@ -2,6 +2,11 @@
 # -*- coding: utf-8 -*-
 """ This module runs the AudioFile Synchronisation """
 
+# What can be improved:
+# - We could inherit from socket.socket in the Server class
+# - Refactor some code to get 10/10 when running pylint
+
+# built-in modules
 import optparse
 import sys
 import logging
@@ -12,12 +17,11 @@ import os
 import time
 import thread
 
+# local modules
 sys.path.append('/etc/af-sync.d/')
 import configuration
-
 sys.path.append('/usr/local/bin/')
 from af_sync_single import AFSingle
-
 import logging_functions as lf
 
 
@@ -32,7 +36,7 @@ class Server(object):
     """ The server class. It will be started as well as the AFMulti object
     and will receive the commands from the script in /etc/init.d """
     def __init__(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger('multi')
         self.logger.debug('New server created')
 
         self.socket = socket.socket()
@@ -115,6 +119,57 @@ class AFMulti(object):
             |   |-> format 1
             |   |-> format 2
         """
+        self.log_dict = log_dict
+
+        # self.logger creates the multi logger
+        # the one that will generates messages if an error happens
+        # on the server for example (connection issue is an example)
+        self.logger = logging.getLogger('multi')
+        self.logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
+
+        handler = create_handler(
+            name='multi stream' % locals(),
+            handler_key='stream',
+            level=self.log_dict['STDERR']['log_level'],
+            log_format=self.log_dict['GENERAL']['log_format']
+        )
+        self.logger.addHandler(handler)
+        handler = create_handler(
+            name='multi stream' % locals(),
+            handler_key='file',
+            level=self.log_dict['LOGFILE']['log_level'],
+            log_format=self.log_dict['GENERAL']['log_format'],
+            option=log_dict['LOGFILE']['log_file'] % 'multi'
+        )
+        self.logger.addHandler(handler)
+        handler = create_handler(
+            name='multi stream' % locals(),
+            handler_key='file debug',
+            level=self.log_dict['LOGFILE DEBUG']['log_level'],
+            log_format=self.log_dict['GENERAL']['log_format'],
+            option=log_dict['LOGFILE DEBUG']['log_file'] % 'multi'
+        )
+        self.logger.addHandler(handler)
+
+        # self.single_logger is the logger that will display all the logging
+        # messages for AFSingle
+        self.single_logger = logging.getLogger(__name__)
+        # We create the StreamHandler here, and not with the other ones since
+        # this is one will remain open all the time
+        handler = create_handler(
+            name='stream multi' % locals(),
+            handler_key='stream',
+            level=self.log_dict['STDERR']['log_level'],
+            log_format=self.log_dict['GENERAL']['log_format'],
+        )
+        self.single_logger.addHandler(handler)
+        # propagate turned off, so what is printed doesn't appear twice
+        self.single_logger.propagate = False
+        self.single_logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
+        # We disable the propagation so the children of root
+        # won't return it the messages, and so, they won't appear twice
+
+        # if start_server we start the server (the daemon)
         self.start_server = start_server
         self.server = None
         if start_server:
@@ -125,7 +180,9 @@ class AFMulti(object):
                                   ' Traceback: %s', str(error))
                 raise
 
+        # If no config, we get the default one
         config_path = config or configuration.CONFIG_PATH
+        # then we parse it
         self.config = self._parse_config(config_path)
         # FIXME: if self.date is None, it means: do not stop at the end of the
         # day. Else, download everything for a specific day
@@ -133,17 +190,11 @@ class AFMulti(object):
         self.date = configuration.DATE
         self.target_file = ''
 
-        self.logger = logging.getLogger(__name__)
-        self.logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
-        self.log_dict = log_dict
-
     def run(self, args):
         """ Run the process of going through all the
         hosts/services/file_formats in the configuration in order to download
         the files """
         self.logger.debug('AF Sync Multi Instance running')
-        run_host = False
-        run_service = False
 
         processed = 0
         records_map = self.get_files_to_update()
@@ -154,11 +205,45 @@ class AFMulti(object):
                 service = config['service']
                 file_formats = config['file_formats']
                 map_file = config['map_file']
+
                 # Get the the records for a specific host,
                 # service and format
                 for file_format in file_formats:
                     records = records_map[(host, service, file_format)]
+                    # That's where we create the handlers for AFSingle
+                    # (only the file handlers as we close it when the job is
+                    # done)
+                    handlers = []
 
+                    filename = (self.log_dict['LOGFILE']['log_file']
+                                % ('%(service)s-%(file_format)s' % locals()))
+                    filename_debug = (
+                        self.log_dict['LOGFILE DEBUG']['log_file']
+                        % ('%(service)s-%(file_format)s' % locals())
+                    )
+                    handler = create_handler(
+                        name='%(service)s-%(file_format)s' % locals(),
+                        handler_key='file',
+                        level=self.log_dict['LOGFILE']['log_level'],
+                        log_format=self.log_dict['GENERAL']['log_format'],
+                        option=filename
+                    )
+                    handlers.append(handler)
+
+                    handler = create_handler(
+                        name='%(service)s-%(file_format)s' % locals(),
+                        handler_key='file debug',
+                        level=self.log_dict['LOGFILE DEBUG']['log_level'],
+                        log_format=self.log_dict['GENERAL']['log_format'],
+                        option=filename_debug
+                    )
+                    handlers.append(handler)
+
+                    for handler in handlers:
+                        self.single_logger.addHandler(handler)
+
+                    # TODO increase the sleep time everytime we actually do a
+                    # time.sleep
                     sleep_time = 5
                     if processed >= len(records):
                         time.sleep(sleep_time)
@@ -171,14 +256,26 @@ class AFMulti(object):
                                          'Format: %(file_format)s, '
                                          'File: %(file_name)s', locals())
                         options = {'map_file': map_file}
+
+                        # Here is the most important part
+                        # This is where where we create the instance and start
+                        # it
                         instance = AFSingle(host=host,
                                             file_format=file_format,
                                             service=service,
                                             record=current_record,
                                             options=options,
-                                            log_dict=self.log_dict)
+                                            logger=self.single_logger)
+                        processed += 1
                         self.target_file = instance.target_file
                         instance.process()
+
+                        # We remove the handlers we created for this AFSingle
+                        # instance
+                        for handler in handlers:
+                            if handler in self.logger.handlers:
+                                index = self.logger.handlers.index(handler)
+                                del(self.logger.handlers[index])
 
     def fullstatus(self):
         """ Get the full status using the status method """
@@ -233,6 +330,7 @@ class AFMulti(object):
     def stop(self):
         """ Terminates the program """
         self.logger.debug('Sending stop to client')
+        # sending '' means shutting down the communication
         self.send('')
         if self.start_server:
             self.server.close()
@@ -241,6 +339,8 @@ class AFMulti(object):
     def reload(self, lock):
         """ Reload the configuration """
         self.logger.debug('Sending reload to client')
+        # We need to make sure that the other thread is not doing anything with
+        # the config
         lock.acquire()
         self.config = self._parse_config(configuration.CONFIG_PATH)
         lock.release()
@@ -296,7 +396,6 @@ class AFMulti(object):
         Given a valid line in the config file, this function
         will extrapolate the instance or instances to be started.
         """
-        #map_file_invalid = False
         config = {}
         try:
             config['host'] = config_line.split()[0]
@@ -327,7 +426,6 @@ class AFMulti(object):
                 'Map file cannot be used when * is used for format'
             )
 
-        # Append this/these format(s) and service(s) to the result array
         return config
 
     def send(self, message):
@@ -341,6 +439,26 @@ class AFMulti(object):
         return '<AFMulti server: %s, config: %s, date: %s>' % (
             self.server, self.config, self.date
         )
+
+
+def create_handler(name, handler_key, level, log_format, option=None):
+    """ Given a new, a handler key a level, a log_format, and an option
+    (if the key is 'file' or 'file debug') returns a handler """
+    handlers_mapping = {
+        'file': logging.FileHandler,
+        'email': logging.handlers.SMTPHandler,
+        'file debug': logging.FileHandler,
+        'stream': logging.StreamHandler
+    }
+    if option is not None:
+        handler = handlers_mapping[handler_key](option)
+    else:
+        handler = handlers_mapping[handler_key]()
+    handler.setLevel(level)
+    handler.name = name
+    formatter = logging.Formatter(log_format)
+    handler.setFormatter(formatter)
+    return handler
 
 
 def get_file_list(host, file_format, service, date):
@@ -382,20 +500,29 @@ def setup_parser():
 
 def main(start_server=True):
     """ This function actually runs the program. """
-    logger = logging.getLogger(__name__)
+    logger = logging.getLogger('multi')
+    logger.propagate = False
+    # We disable the propagation so the children of root won't return it the
+    # messages, and so, they won't appear twice
     log_dict = lf.get_log_conf()
+
     args = setup_parser()
-    lf.setup_log_handlers(logger, log_dict)
     config_file = args.config_file or configuration.CONFIG_PATH
 
+    # Creation of the main object
     multi = AFMulti(config=config_file, log_dict=log_dict,
                     start_server=start_server)
 
     if start_server:
+        # Here we create the lock that we will need when reload the config
         lock = thread.allocate_lock()
+        # The main thread will wait for messages coming from the client
+        # (the script in init.d)
         my_thread = thread.start_new_thread(multi.run, (lock,))
         while my_thread:
+            # Get what the client sends
             content = multi.server.read()
+            # If the client closes the connection, we reopen a new one
             if not content:
                 multi.server.reopen_connection()
             else:
@@ -413,6 +540,8 @@ def main(start_server=True):
                     else:
                         method()
     else:
+        # If we want to start the daemon in the foreground
+        # And get to use the logging messages
         multi.run(())
 
 if __name__ == '__main__':
