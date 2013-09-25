@@ -127,14 +127,14 @@ class AFMulti(object):
         self.logger = logging.getLogger('multi')
         self.logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
 
-        handler = create_handler(
+        handler = lf.create_handler(
             name='multi stream' % locals(),
             handler_key='stream',
             level=self.log_dict['STDERR']['log_level'],
             log_format=self.log_dict['GENERAL']['log_format']
         )
         self.logger.addHandler(handler)
-        handler = create_handler(
+        handler = lf.create_handler(
             name='multi stream' % locals(),
             handler_key='file',
             level=self.log_dict['LOGFILE']['log_level'],
@@ -142,7 +142,7 @@ class AFMulti(object):
             option=log_dict['LOGFILE']['log_file'] % 'multi'
         )
         self.logger.addHandler(handler)
-        handler = create_handler(
+        handler = lf.create_handler(
             name='multi stream' % locals(),
             handler_key='file debug',
             level=self.log_dict['LOGFILE DEBUG']['log_level'],
@@ -156,7 +156,7 @@ class AFMulti(object):
         self.single_logger = logging.getLogger(__name__)
         # We create the StreamHandler here, and not with the other ones since
         # this is one will remain open all the time
-        handler = create_handler(
+        handler = lf.create_handler(
             name='stream multi' % locals(),
             handler_key='stream',
             level=self.log_dict['STDERR']['log_level'],
@@ -221,7 +221,7 @@ class AFMulti(object):
                         self.log_dict['LOGFILE DEBUG']['log_file']
                         % ('%(service)s-%(file_format)s' % locals())
                     )
-                    handler = create_handler(
+                    handler = lf.create_handler(
                         name='%(service)s-%(file_format)s' % locals(),
                         handler_key='file',
                         level=self.log_dict['LOGFILE']['log_level'],
@@ -230,7 +230,7 @@ class AFMulti(object):
                     )
                     handlers.append(handler)
 
-                    handler = create_handler(
+                    handler = lf.create_handler(
                         name='%(service)s-%(file_format)s' % locals(),
                         handler_key='file debug',
                         level=self.log_dict['LOGFILE DEBUG']['log_level'],
@@ -439,26 +439,6 @@ class AFMulti(object):
         return '<AFMulti server: %s, config: %s, date: %s>' % (
             self.server, self.config, self.date
         )
-
-
-def create_handler(name, handler_key, level, log_format, option=None):
-    """ Given a new, a handler key a level, a log_format, and an option
-    (if the key is 'file' or 'file debug') returns a handler """
-    handlers_mapping = {
-        'file': logging.FileHandler,
-        'email': logging.handlers.SMTPHandler,
-        'file debug': logging.FileHandler,
-        'stream': logging.StreamHandler
-    }
-    if option is not None:
-        handler = handlers_mapping[handler_key](option)
-    else:
-        handler = handlers_mapping[handler_key]()
-    handler.setLevel(level)
-    handler.name = name
-    formatter = logging.Formatter(log_format)
-    handler.setFormatter(formatter)
-    return handler
 
 
 def get_file_list(host, file_format, service, date):

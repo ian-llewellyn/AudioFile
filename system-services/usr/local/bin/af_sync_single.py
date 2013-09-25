@@ -12,10 +12,12 @@ import optparse
 import logging
 import logging.handlers
 
-sys.path.append('/etc/af-sync.d')
+sys.path.append('/home/paco/Projects/RTÉ/audiofile/etc/af-sync.d')
+#sys.path.append('/etc/af-sync.d')
 import configuration
 
-sys.path.append('/usr/local/lib')
+sys.path.append('/home/paco/Projects/RTÉ/audiofile/usr/local/lib')
+#sys.path.append('/usr/local/lib')
 import logging_functions as lf
 
 
@@ -351,6 +353,17 @@ def test():
     service = args.service
 
     log_dict = lf.get_log_conf(service, file_format)
+    logger = logging.getLogger(__name__)
+    logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
+    logger.propagate = False
+
+    handler = lf.create_handler(
+        name='stream multi' % locals(),
+        handler_key='stream',
+        level=log_dict['STDERR']['log_level'],
+        log_format=log_dict['GENERAL']['log_format'],
+    )
+    logger.addHandler(handler)
 
     if args.verbosity is not None:
         try:
@@ -394,7 +407,7 @@ def test():
                             file_format=file_format,
                             record=record,
                             options=options,
-                            log_dict=log_dict)
+                            logger=logger)
         instance.process()
         del(instance)
 
