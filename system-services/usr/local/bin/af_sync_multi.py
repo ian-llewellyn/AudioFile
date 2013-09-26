@@ -531,7 +531,7 @@ def main(start_server=True):
     # Creation of the main object
     multi = AFMulti(config=config_file, log_dict=log_dict,
                     start_server=start_server,
-                    date=args.date or str(datetime.datetime.utcnow()))
+                    date=args.date or str(datetime.datetime.utcnow().date()))
 
     if start_server:
         # Here we create the lock that we will need when reload the config
