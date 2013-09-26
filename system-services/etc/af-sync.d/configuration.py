@@ -4,7 +4,6 @@
 """ Contains the default values for the AF_SYN_RT program """
 
 import logging
-import datetime
 
 LOG_FORMAT = '[%(asctime)s] %(process)d %(levelname)s: %(message)s'
 LOG_FILE = '/var/log/audiofile/af-sync-%s.log'
@@ -25,9 +24,9 @@ LOCK_FILE = '/var/lock/subsys/af-sync.lock'
 # Other
 INTER_DELTA_SLEEP_TIME = 750
 DELTA_RETRIES = 2
-NO_PROGRESS_SLEEP_TIME = 120000
+# No progress sleep time
+NP_SLEEP_TIME = 120000
 CHUNK_SIZE = 520160
-DATE = str(datetime.datetime.utcnow().date())
 
 PORT_NUMBER = 11111
 CONFIG_PATH = '/etc/af-sync.d/af-sync.conf'

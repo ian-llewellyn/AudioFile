@@ -22,7 +22,7 @@ import logging_functions as lf
 class AFSingle(object):
     """ Single process. It creates deltas objects """
     def __init__(self, host, service, file_format, record, logger,
-                 options=None):
+                 options=None, date=None):
         """ Constructor of the class. Parameters:
             - host: string that represents the hostname
             - file_format: a string that represents the file format (mp2, mp3)
@@ -37,7 +37,7 @@ class AFSingle(object):
         self.host = host
         self.file_format = file_format
         self.service = service
-        self.date = configuration.DATE
+        self.date = date
         self.operation = True
         self.map_file = None
         self.filename = record['file']
@@ -60,7 +60,6 @@ class AFSingle(object):
     def process(self):
         """ Process the single instance """
         recent_truncations = []
-        no_progress_sleep_time = 0
         try:
             # Get a list of files for this date from the server
             # and loop through them
@@ -102,12 +101,13 @@ class AFSingle(object):
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
             self.logger.info('Target File: %s started', self.target_file)
+            today_string = str(datetime.datetime.utcnow().date())
             req_uri = ('http://%(host)s/audio/%(file_format)s/%(service)s'
                        '/%(date)s/%(filename)s' %
                        {'host': self.host,
                         'file_format': self.file_format,
                         'service': self.service,
-                        'date': self.date,
+                        'date': self.date and self.date or today_string,
                         'filename': self.filename})
 
             # The Delta object is the object that will
@@ -118,7 +118,6 @@ class AFSingle(object):
                 while delta.fetch():
                     # Successful update - reset failure count and sleep
                     delta_failures = 0
-                    no_progress_sleep_time = 0
                     self.logger.debug('Delta success - About to sleep '
                                       'for %d ms',
                                       configuration.INTER_DELTA_SLEEP_TIME)
@@ -138,26 +137,6 @@ class AFSingle(object):
             # Here we close the file
             delta.tgt_fp.close()
 
-            # If a date was passed in, then exit now
-            if self.date:
-                self.logger.info('No more updates for date: %s - Exiting',
-                                 self.date)
-                return
-
-            # If no progress is made, we don't want the script going
-            # to 100% CPU. Back off..
-            if no_progress_sleep_time > configuration.NO_PROGRESS_SLEEP_TIME:
-                no_progress_sleep_time = configuration.NO_PROGRESS_SLEEP_TIME
-                self.logger.warning('no_progress_sleep_time hit max. '
-                                    'About to sleep for %d ms',
-                                    no_progress_sleep_time)
-            else:
-                self.logger.info('No progress - About to sleep for %d ms',
-                                 no_progress_sleep_time)
-
-            # TODO: move to af_sync_multi
-            time.sleep(no_progress_sleep_time / 1000)
-            no_progress_sleep_time = (no_progress_sleep_time * 2) + 1000
         except:
             self.logger.exception('Caught unhandled exception')
             raise
@@ -399,7 +378,8 @@ def test():
     if args.date:
         options['date'] = args.date
 
-    records = af_sync_multi.get_file_list(host, file_format, service, date)
+    records = af_sync_multi.get_file_list(host, file_format, service,
+                                          options['date'] or date)
     for record in records:
         instance = AFSingle(host=host, service=service,
                             file_format=file_format,

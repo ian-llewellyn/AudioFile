@@ -16,10 +16,11 @@ import simplejson
 import os
 import time
 import thread
+import datetime
 
 # local modules
 sys.path.append('/etc/af-sync.d/')
-import configuration
+import configuration as g_config
 sys.path.append('/usr/local/bin/')
 sys.path.append('/usr/local/lib/')
 from af_sync_single import AFSingle
@@ -42,7 +43,7 @@ class Server(object):
 
         self.socket = socket.socket()
         self.host = socket.gethostname()
-        self.port = configuration.PORT_NUMBER
+        self.port = g_config.PORT_NUMBER
         self.connection = self.address = None
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
@@ -101,7 +102,8 @@ class AFMulti(object):
     """ The class that handles all the instances.
     It reads the configuration file, and then starts the AF_Single instances
     """
-    def __init__(self, log_dict, config=None, start_server=False):
+    def __init__(self, log_dict, config=None, start_server=False,
+                 date=None, one_day=False):
         """
         self.config is a dictionnary which has this format:
             host1
@@ -182,13 +184,13 @@ class AFMulti(object):
                 raise
 
         # If no config, we get the default one
-        config_path = config or configuration.CONFIG_PATH
+        config_path = config or g_config.CONFIG_PATH
         # then we parse it
         self.config = self._parse_config(config_path)
         # FIXME: if self.date is None, it means: do not stop at the end of the
         # day. Else, download everything for a specific day
         # The way it is now, it will stop at the end of the day
-        self.date = configuration.DATE
+        self.date = date
         self.target_file = ''
 
     def run(self, args):
@@ -200,6 +202,7 @@ class AFMulti(object):
         processed = 0
         records_map = self.get_files_to_update()
 
+        no_progress_sleep_time = 0
         while True:
             for config in self.config:
                 host = config['host']
@@ -210,47 +213,69 @@ class AFMulti(object):
                 # Get the the records for a specific host,
                 # service and format
                 for file_format in file_formats:
+
                     records = records_map[(host, service, file_format)]
 
-                    handlers = self._create_handlers(service, file_format)
-                    # TODO increase the sleep time everytime we actually do a
-                    # time.sleep
-                    sleep_time = 5
-                    if processed >= len(records):
-                        time.sleep(sleep_time)
-                        records_map = self.get_files_to_update()
-                    else:
-                        current_record = records[processed]
-                        file_name = current_record['file']
-                        self.logger.info('Processing: Host: %(host)s, '
-                                         'Service: %(service)s, '
-                                         'Format: %(file_format)s, '
-                                         'File: %(file_name)s', locals())
-                        options = {'map_file': map_file}
+                    handlers = self._create_single_handlers(service,
+                                                            file_format)
+                    current_record = records[processed]
+                    file_name = current_record['file']
+                    self.logger.info('Processing: Host: %(host)s, '
+                                     'Service: %(service)s, '
+                                     'Format: %(file_format)s, '
+                                     'File: %(file_name)s', locals())
+                    options = {'map_file': map_file}
+                    if self.date is not None:
+                        options['date'] = self.date
 
-                        # Here is the most important part
-                        # This is where where we create the instance and start
-                        # it
-                        instance = AFSingle(host=host,
-                                            file_format=file_format,
-                                            service=service,
-                                            record=current_record,
-                                            options=options,
-                                            logger=self.single_logger)
-                        processed += 1
-                        self.target_file = instance.target_file
-                        instance.process()
-                        self._delete_handlers(handlers)
+                    # Here is the most important part
+                    # This is where where we create the instance and start
+                    # it
+                    instance = AFSingle(host=host,
+                                        file_format=file_format,
+                                        service=service,
+                                        record=current_record,
+                                        options=options,
+                                        logger=self.single_logger)
+                    self.target_file = instance.target_file
+                    instance.process()
+                    processed += 1
+                    self._delete_single_handlers(handlers)
+            # If no progress is made, we don't want the script
+            # going to 100% CPU. Back off..
+            if(no_progress_sleep_time >
+               g_config.NP_SLEEP_TIME):
+                no_progress_sleep_time = g_config.NP_SLEEP_TIME
+                self.logger.warning('no_progress_sleep_time hit max. '
+                                    'About to sleep for %d ms',
+                                    no_progress_sleep_time)
+            else:
+                self.logger.info('No progress - About to sleep for %d ms',
+                                 no_progress_sleep_time)
 
-    def _delete_handlers(self, handlers):
+                time.sleep(no_progress_sleep_time / 1000)
+                no_progress_sleep_time = (no_progress_sleep_time * 1
+                                          + 0000)
+            records_map = self.get_files_to_update()
+            processed = 0
+            # We end the process when a date has been passed in and we have
+            # downloaded all the files
+            if self.date is not None:
+                self.logger.info('No more updates for date: '
+                                 '%s - Exiting', self.date)
+                return True
+
+    def _delete_single_handlers(self, handlers):
         """ We remove the handlers we created for this AFSingle
         instance """
         for handler in handlers:
-            if handler in self.logger.handlers:
-                index = self.logger.handlers.index(handler)
-                del(self.logger.handlers[index])
+            if handler in self.single_logger.handlers:
+                index = self.single_logger.handlers.index(handler)
+                # Close the open file
+                handler.close()
+                del(self.single_logger.handlers[index])
 
-    def _create_handlers(self, service, file_format):
+    def _create_single_handlers(self, service, file_format):
         """ That's where we create the handlers for AFSingle
         (only the file handlers as we close it when the job is
         done) """
@@ -298,7 +323,7 @@ class AFMulti(object):
             'current_file': self.target_file
         }
 
-        new_config = self._parse_config(configuration.CONFIG_PATH)
+        new_config = self._parse_config(g_config.CONFIG_PATH)
         configured = len(self.config)
         output += 'Configured instances: %(configured)d\n' % locals()
 
@@ -349,7 +374,7 @@ class AFMulti(object):
         # We need to make sure that the other thread is not doing anything with
         # the config
         lock.acquire()
-        self.config = self._parse_config(configuration.CONFIG_PATH)
+        self.config = self._parse_config(g_config.CONFIG_PATH)
         lock.release()
         message = 'Configuration has been loaded'
         self.server.send(message)
@@ -457,6 +482,12 @@ def get_file_list(host, file_format, service, date):
     as: http://host/format/service/date/
     """
     logger = logging.getLogger(__name__)
+
+    # If date is None that means that we didn't pass in a date, so we keep
+    # downloading file and refreshing this date variable to get
+    # the latest files
+    if date is None:
+        date = str(datetime.datetime.utcnow().date())
     url = ('http://%s/webservice/v2/listfiles.php?format=%s&service=%s&date=%s'
            % (host, file_format, service, date))
     logging.debug('Getting file list at: %s', url)
@@ -482,6 +513,7 @@ def setup_parser():
 
     parser.add_option('-c', '--config', dest='config_file', type=str, nargs=1)
     parser.add_option('-v', '--verbose', dest='verbosity', type=str, nargs=1)
+    parser.add_option('-d', '--date', dest='date', type=str, nargs=1)
     return parser.parse_args()[0]
 
 
@@ -494,11 +526,12 @@ def main(start_server=True):
     log_dict = lf.get_log_conf()
 
     args = setup_parser()
-    config_file = args.config_file or configuration.CONFIG_PATH
+    config_file = args.config_file or g_config.CONFIG_PATH
 
     # Creation of the main object
     multi = AFMulti(config=config_file, log_dict=log_dict,
-                    start_server=start_server)
+                    start_server=start_server,
+                    date=args.date or str(datetime.datetime.utcnow()))
 
     if start_server:
         # Here we create the lock that we will need when reload the config
