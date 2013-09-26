@@ -225,8 +225,6 @@ class AFMulti(object):
                                      'Format: %(file_format)s, '
                                      'File: %(file_name)s', locals())
                     options = {'map_file': map_file}
-                    if self.date is not None:
-                        options['date'] = self.date
 
                     # Here is the most important part
                     # This is where where we create the instance and start
@@ -513,7 +511,6 @@ def setup_parser():
 
     parser.add_option('-c', '--config', dest='config_file', type=str, nargs=1)
     parser.add_option('-v', '--verbose', dest='verbosity', type=str, nargs=1)
-    parser.add_option('-d', '--date', dest='date', type=str, nargs=1)
     return parser.parse_args()[0]
 
 
@@ -530,8 +527,7 @@ def main(start_server=True):
 
     # Creation of the main object
     multi = AFMulti(config=config_file, log_dict=log_dict,
-                    start_server=start_server,
-                    date=args.date or str(datetime.datetime.utcnow().date()))
+                    start_server=start_server)
 
     if start_server:
         # Here we create the lock that we will need when reload the config
