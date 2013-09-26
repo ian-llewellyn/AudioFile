@@ -21,6 +21,7 @@ import thread
 sys.path.append('/etc/af-sync.d/')
 import configuration
 sys.path.append('/usr/local/bin/')
+sys.path.append('/usr/local/lib/')
 from af_sync_single import AFSingle
 import logging_functions as lf
 
@@ -210,38 +211,8 @@ class AFMulti(object):
                 # service and format
                 for file_format in file_formats:
                     records = records_map[(host, service, file_format)]
-                    # That's where we create the handlers for AFSingle
-                    # (only the file handlers as we close it when the job is
-                    # done)
-                    handlers = []
 
-                    filename = (self.log_dict['LOGFILE']['log_file']
-                                % ('%(service)s-%(file_format)s' % locals()))
-                    filename_debug = (
-                        self.log_dict['LOGFILE DEBUG']['log_file']
-                        % ('%(service)s-%(file_format)s' % locals())
-                    )
-                    handler = lf.create_handler(
-                        name='%(service)s-%(file_format)s' % locals(),
-                        handler_key='file',
-                        level=self.log_dict['LOGFILE']['log_level'],
-                        log_format=self.log_dict['GENERAL']['log_format'],
-                        option=filename
-                    )
-                    handlers.append(handler)
-
-                    handler = lf.create_handler(
-                        name='%(service)s-%(file_format)s' % locals(),
-                        handler_key='file debug',
-                        level=self.log_dict['LOGFILE DEBUG']['log_level'],
-                        log_format=self.log_dict['GENERAL']['log_format'],
-                        option=filename_debug
-                    )
-                    handlers.append(handler)
-
-                    for handler in handlers:
-                        self.single_logger.addHandler(handler)
-
+                    handlers = self._create_handlers(service, file_format)
                     # TODO increase the sleep time everytime we actually do a
                     # time.sleep
                     sleep_time = 5
@@ -269,13 +240,49 @@ class AFMulti(object):
                         processed += 1
                         self.target_file = instance.target_file
                         instance.process()
+                        self._delete_handlers(handlers)
 
-                        # We remove the handlers we created for this AFSingle
-                        # instance
-                        for handler in handlers:
-                            if handler in self.logger.handlers:
-                                index = self.logger.handlers.index(handler)
-                                del(self.logger.handlers[index])
+    def _delete_handlers(self, handlers):
+        """ We remove the handlers we created for this AFSingle
+        instance """
+        for handler in handlers:
+            if handler in self.logger.handlers:
+                index = self.logger.handlers.index(handler)
+                del(self.logger.handlers[index])
+
+    def _create_handlers(self, service, file_format):
+        """ That's where we create the handlers for AFSingle
+        (only the file handlers as we close it when the job is
+        done) """
+        handlers = []
+
+        filename = (self.log_dict['LOGFILE']['log_file']
+                    % ('%(service)s-%(file_format)s' % locals()))
+        filename_debug = (
+            self.log_dict['LOGFILE DEBUG']['log_file']
+            % ('%(service)s-%(file_format)s' % locals())
+        )
+        handler = lf.create_handler(
+            name='%(service)s-%(file_format)s' % locals(),
+            handler_key='file',
+            level=self.log_dict['LOGFILE']['log_level'],
+            log_format=self.log_dict['GENERAL']['log_format'],
+            option=filename
+        )
+        handlers.append(handler)
+
+        handler = lf.create_handler(
+            name='%(service)s-%(file_format)s' % locals(),
+            handler_key='file debug',
+            level=self.log_dict['LOGFILE DEBUG']['log_level'],
+            log_format=self.log_dict['GENERAL']['log_format'],
+            option=filename_debug
+        )
+        handlers.append(handler)
+
+        for handler in handlers:
+            self.single_logger.addHandler(handler)
+        return handlers
 
     def fullstatus(self):
         """ Get the full status using the status method """
