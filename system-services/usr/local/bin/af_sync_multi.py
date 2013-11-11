@@ -128,13 +128,14 @@ class AFMulti(object):
         self.logger = logging.getLogger('multi')
         self.logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
 
-        handler = lf.create_handler(
-            name='multi stream' % locals(),
-            handler_key='stream',
-            level=self.log_dict['STDERR']['log_level'],
-            log_format=self.log_dict['GENERAL']['log_format']
-        )
-        self.logger.addHandler(handler)
+        if not start_server:
+            handler = lf.create_handler(
+                name='multi stream' % locals(),
+                handler_key='stream',
+                level=self.log_dict['STDERR']['log_level'],
+                log_format=self.log_dict['GENERAL']['log_format']
+            )
+            self.logger.addHandler(handler)
         handler = lf.create_handler(
             name='multi stream' % locals(),
             handler_key='file',
@@ -157,13 +158,14 @@ class AFMulti(object):
         self.single_logger = logging.getLogger(__name__)
         # We create the StreamHandler here, and not with the other ones since
         # this is one will remain open all the time
-        handler = lf.create_handler(
-            name='stream multi' % locals(),
-            handler_key='stream',
-            level=self.log_dict['STDERR']['log_level'],
-            log_format=self.log_dict['GENERAL']['log_format'],
-        )
-        self.single_logger.addHandler(handler)
+        if not start_server:
+            handler = lf.create_handler(
+                name='stream multi' % locals(),
+                handler_key='stream',
+                level=self.log_dict['STDERR']['log_level'],
+                log_format=self.log_dict['GENERAL']['log_format'],
+            )
+            self.single_logger.addHandler(handler)
         # propagate turned off, so what is printed doesn't appear twice
         self.single_logger.propagate = False
         self.single_logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
