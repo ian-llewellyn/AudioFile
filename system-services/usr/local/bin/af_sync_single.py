@@ -45,12 +45,14 @@ class AFSingle(object):
         if options is not None:
             if 'date' in options:
                 self.date = options['date']
+            else:
+                self.date = None
             if 'noop' in options:
                 self.operation = not options['noop']
             if 'map_file' in options:
                 self.map_file = options['map_file']
         self.records = get_file_list(host, file_format, service,
-                                     options['date'])
+                                     self.date)
 
         self.logger = logger
 

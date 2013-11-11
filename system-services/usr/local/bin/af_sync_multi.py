@@ -14,7 +14,6 @@ import socket
 import os
 import time
 import thread
-import datetime
 
 # local modules
 sys.path.append('/etc/af-sync.d/')
@@ -201,6 +200,7 @@ class AFMulti(object):
         processed = 0
 
         no_progress_sleep_time = 0
+        list_instances = []
         while True:
             for config in self.config:
                 host = config['host']
@@ -226,10 +226,12 @@ class AFMulti(object):
                                         service=service,
                                         options=options,
                                         logger=self.single_logger)
+                    list_instances.append(instance)
                     self.target_file = instance.target_file
+                for instance in list_instances:
                     instance.step()
                     processed += 1
-                    self._delete_single_handlers(handlers)
+            self._delete_single_handlers(handlers)
             # If no progress is made, we don't want the script
             # going to 100% CPU. Back off..
             if(no_progress_sleep_time >
@@ -487,7 +489,7 @@ def main(start_server=True):
     # Creation of the main object
     multi = AFMulti(config=config_file, log_dict=log_dict,
                     start_server=start_server,
-                    date=args.date or str(datetime.datetime.utcnow().date()))
+                    date=args.date)
 
     if start_server:
         # Here we create the lock that we will need when reload the config
