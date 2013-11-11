@@ -25,6 +25,7 @@ import optparse
 import errno
 
 sys.path.append('/usr/local/bin/')
+sys.path.append('/usr/local/lib/')
 sys.path.append('/etc/af-sync.d/')
 import af_sync_multi
 import configuration
@@ -162,7 +163,7 @@ def main():
                     try:
                         daemon.start(start_server=True)
                     except socket.error, error:
-                        if error.errno == errno.EADDRINUSE:
+                        if error[0] == errno.EADDRINUSE:
                             print('Address already in use. '
                                   'Daemon already started?')
                         else:
