@@ -33,3 +33,4 @@ CONFIG_PATH = '/etc/af-sync.d/af-sync.conf'
 
 LOG_LEVEL = 2
 VERB_LEVEL = 1
+NP_SLEEP_TIME = 20
