@@ -131,10 +131,10 @@ def main():
         if action not in ('fg', 'start', 'restart'):
             try:
                 daemon.connect()
-            except socket.error, error:
-                if error[0] == errno.ECONNREFUSED:
+            except socket.error as error:
+                if error.errno == errno.ECONNREFUSED:
                     print 'Connection refused. Have you started the server?'
-                    sys.exit(0)
+                    sys.exit(1)
             try:
                 getattr(daemon, action)()
             except AttributeError:
@@ -149,11 +149,11 @@ def main():
             if action == 'restart':
                 try:
                     daemon.connect()
-                except socket.error, error:
+                except socket.error as error:
                     if error.errno == errno.ECONNREFUSED:
                         print('Connection refused. Have you started '
                               'the server?')
-                        sys.exit(0)
+                        sys.exit(1)
 
                 daemon.stop()
             if action != 'fg':
@@ -161,13 +161,13 @@ def main():
                 if pid == 0:
                     try:
                         daemon.start(start_server=True)
-                    except socket.error, error:
+                    except socket.error as error:
                         if error.errno == errno.EADDRINUSE:
                             print('Address already in use. '
                                   'Daemon already started?')
                         else:
                             print error.msg
-                        sys.exit(0)
+                        sys.exit(1)
     else:
         usage()
         sys.exit(1)
