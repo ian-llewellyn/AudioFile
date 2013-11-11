@@ -1,4 +1,17 @@
 ========[ ISSUES ]========
+* init.d status should have return code 1 if the service is not running.
+* af_sync_single has to call af_sync_multi for some processing - there is
+  something a bit circular about that.
+* Would rather af_sync_multi knew nothing about the internals of af_sync_single,
+  and just ran something like af_single_instance.step() at regular intervals.
+* Configuration file should be parsed rather than a Python file.
+* The Client logic could be incorporated into the af_sync_multi.py file,
+  allowing the init.d script to be a symlink (thus removing the ugly .py from
+  it's name.
+* Logging functions should be incorporated into the af_sync_single/multi.py
+  files. The complex single logic is specific to single, and the multi logic
+  should be simpler and apply only to multi. I don't like the idea of making
+  /usr/local/lib a package directory.
 
 
 ========[ FIXED ]=========

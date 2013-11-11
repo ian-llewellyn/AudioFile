@@ -131,8 +131,8 @@ def main():
         if action not in ('fg', 'start', 'restart'):
             try:
                 daemon.connect()
-            except socket.error as error:
-                if error.errno == errno.ECONNREFUSED:
+            except socket.error, error:
+                if error[0] == errno.ECONNREFUSED:
                     print 'Connection refused. Have you started the server?'
                     sys.exit(1)
             try:
@@ -149,7 +149,7 @@ def main():
             if action == 'restart':
                 try:
                     daemon.connect()
-                except socket.error as error:
+                except socket.error, error:
                     if error.errno == errno.ECONNREFUSED:
                         print('Connection refused. Have you started '
                               'the server?')
@@ -161,7 +161,7 @@ def main():
                 if pid == 0:
                     try:
                         daemon.start(start_server=True)
-                    except socket.error as error:
+                    except socket.error, error:
                         if error.errno == errno.EADDRINUSE:
                             print('Address already in use. '
                                   'Daemon already started?')
