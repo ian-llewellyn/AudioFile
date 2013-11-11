@@ -11,8 +11,6 @@ import optparse
 import sys
 import logging
 import socket
-import urllib2
-import simplejson
 import os
 import time
 import thread
@@ -23,6 +21,7 @@ sys.path.append('/etc/af-sync.d/')
 import configuration as g_config
 sys.path.append('/usr/local/bin/')
 sys.path.append('/usr/local/lib/')
+import af_sync_single as afs
 from af_sync_single import AFSingle
 import logging_functions as lf
 
@@ -200,7 +199,6 @@ class AFMulti(object):
         self.logger.debug('AF Sync Multi Instance running')
 
         processed = 0
-        records_map = self.get_files_to_update()
 
         no_progress_sleep_time = 0
         while True:
@@ -214,16 +212,8 @@ class AFMulti(object):
                 # service and format
                 for file_format in file_formats:
 
-                    records = records_map[(host, service, file_format)]
-
                     handlers = self._create_single_handlers(service,
                                                             file_format)
-                    current_record = records[processed]
-                    file_name = current_record['file']
-                    self.logger.info('Processing: Host: %(host)s, '
-                                     'Service: %(service)s, '
-                                     'Format: %(file_format)s, '
-                                     'File: %(file_name)s', locals())
                     options = {'map_file': map_file}
                     if self.date is not None:
                         options['date'] = self.date
@@ -234,11 +224,10 @@ class AFMulti(object):
                     instance = AFSingle(host=host,
                                         file_format=file_format,
                                         service=service,
-                                        record=current_record,
                                         options=options,
                                         logger=self.single_logger)
                     self.target_file = instance.target_file
-                    instance.process()
+                    instance.step()
                     processed += 1
                     self._delete_single_handlers(handlers)
             # If no progress is made, we don't want the script
@@ -254,9 +243,8 @@ class AFMulti(object):
                                  no_progress_sleep_time)
 
                 time.sleep(no_progress_sleep_time / 1000)
-                no_progress_sleep_time = (no_progress_sleep_time * 1
-                                          + 0000)
-            records_map = self.get_files_to_update()
+                no_progress_sleep_time = (no_progress_sleep_time * 2
+                                          + 1000)
             processed = 0
             # We end the process when a date has been passed in and we have
             # downloaded all the files
@@ -389,8 +377,8 @@ class AFMulti(object):
             service = config['service']
             file_formats = config['file_formats']
             for file_format in file_formats:
-                list_files = get_file_list(host, file_format, service,
-                                           self.date)
+                list_files = afs.get_file_list(host, file_format,
+                                               service, self.date)
 
                 records_map[(host, service, file_format)] = list_files
         return records_map
@@ -473,40 +461,6 @@ class AFMulti(object):
         )
 
 
-def get_file_list(host, file_format, service, date):
-    """ get_file_list(host, format, service, date) -> [
-        {'title': '01:00:00', 'file': '2012-08-30-00-00-00-00.mp2',
-         'size': 123456}*
-    ]
-    Returns an array from the directory listing received by a HTTP call such
-    as: http://host/format/service/date/
-    """
-    logger = logging.getLogger(__name__)
-
-    # If date is None that means that we didn't pass in a date, so we keep
-    # downloading file and refreshing this date variable to get
-    # the latest files
-    if date is None:
-        date = str(datetime.datetime.utcnow().date())
-    url = ('http://%s/webservice/v2/listfiles.php?format=%s&service=%s&date=%s'
-           % (host, file_format, service, date))
-    logging.debug('Getting file list at: %s', url)
-    req = urllib2.Request(url)
-    try:
-        resp = urllib2.urlopen(req)
-    except urllib2.URLError, error:
-        # If a firewall is blocking access, you get: 113, 'No route to host'
-        logger.warning('Received URLError in function: '
-                       'get_file_list(%s, %s, %s, %s): %s',
-                       host, file_format, service, date, error)
-        return []
-    else:
-        decoded = simplejson.loads(resp.read())
-
-    #return record['file'] for record in decoded['files']]
-    return decoded['files']
-
-
 def setup_parser():
     """ Setup the need options for the parser """
     parser = optparse.OptionParser()
@@ -527,6 +481,8 @@ def main(start_server=True):
 
     args = setup_parser()
     config_file = args.config_file or g_config.CONFIG_PATH
+    if args.verbosity:
+        log_dict['STDERR']['log_level'] = getattr(logging, args.verbosity)
 
     # Creation of the main object
     multi = AFMulti(config=config_file, log_dict=log_dict,

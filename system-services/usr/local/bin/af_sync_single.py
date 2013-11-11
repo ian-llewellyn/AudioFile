@@ -11,6 +11,7 @@ import sys
 import optparse
 import logging
 import logging.handlers
+import simplejson
 
 sys.path.append('/etc/af-sync.d')
 import configuration
@@ -21,7 +22,7 @@ import logging_functions as lf
 
 class AFSingle(object):
     """ Single process. It creates deltas objects """
-    def __init__(self, host, service, file_format, record, logger,
+    def __init__(self, host, service, file_format, logger,
                  options=None, date=None):
         """ Constructor of the class. Parameters:
             - host: string that represents the hostname
@@ -34,15 +35,13 @@ class AFSingle(object):
         """
 
         self.deltas = []
+        self.number_of_iterations = 0
         self.host = host
         self.file_format = file_format
         self.service = service
         self.date = date
         self.operation = True
         self.map_file = None
-        self.filename = record['file']
-        self.size = record['size']
-        self.title = record['title']
         if options is not None:
             if 'date' in options:
                 self.date = options['date']
@@ -50,14 +49,28 @@ class AFSingle(object):
                 self.operation = not options['noop']
             if 'map_file' in options:
                 self.map_file = options['map_file']
-        self.target_file = file_map(self.date, self.map_file,
-                                    self.filename,
-                                    self.file_format,
-                                    self.service)
+        self.records = get_file_list(host, file_format, service,
+                                     options['date'])
 
         self.logger = logger
 
-    def process(self):
+    @property
+    def target_file(self):
+        record = self.records[self.number_of_iterations]
+        filename = record['file']
+        return file_map(self.date, self.map_file,
+                        filename,
+                        self.file_format, self.service)
+
+    @property
+    def filename(self):
+        return self.records[self.number_of_iterations]['file']
+
+    @property
+    def size(self):
+        return self.records[self.number_of_iterations]['size']
+
+    def step(self):
         """ Process the single instance """
         recent_truncations = []
         try:
@@ -96,7 +109,6 @@ class AFSingle(object):
                 self.logger.info('Target File: %s has same size as '
                                  'Source File: %s', self.target_file,
                                  self.filename)
-                return
 
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
@@ -110,6 +122,14 @@ class AFSingle(object):
                         'date': self.date and self.date or today_string,
                         'filename': self.filename})
 
+            self.logger.info('Processing: Host: %(host)s, '
+                             'Service: %(service)s, '
+                             'Format: %(file_format)s, '
+                             'File: %(file_name)s',
+                             {'host': self.host,
+                              'service': self.service,
+                              'file_format': self.file_format,
+                              'file_name': self.filename})
             # The Delta object is the object that will
             # actually download the data
             delta = Delta(req_uri, self.target_file, operation=self.operation,
@@ -140,6 +160,12 @@ class AFSingle(object):
         except:
             self.logger.exception('Caught unhandled exception')
             raise
+
+        if (self.number_of_iterations+1) < len(self.records):
+            self.number_of_iterations += 1
+            return True
+        else:
+            return False
 
 
 ## Global Function Definitions
@@ -298,6 +324,40 @@ def utc_file_to_local(file_title):
     return (int(dow), hour)
 
 
+def get_file_list(host, file_format, service, date):
+    """ get_file_list(host, format, service, date) -> [
+        {'title': '01:00:00', 'file': '2012-08-30-00-00-00-00.mp2',
+         'size': 123456}*
+    ]
+    Returns an array from the directory listing received by a HTTP call such
+    as: http://host/format/service/date/
+    """
+    logger = logging.getLogger(__name__)
+
+    # If date is None that means that we didn't pass in a date, so we keep
+    # downloading file and refreshing this date variable to get
+    # the latest files
+    if date is None:
+        date = str(datetime.datetime.utcnow().date())
+    url = ('http://%s/webservice/v2/listfiles.php?format=%s&service=%s&date=%s'
+           % (host, file_format, service, date))
+    logging.debug('Getting file list at: %s', url)
+    req = urllib2.Request(url)
+    try:
+        resp = urllib2.urlopen(req)
+    except urllib2.URLError, error:
+        # If a firewall is blocking access, you get: 113, 'No route to host'
+        logger.warning('Received URLError in function: '
+                       'get_file_list(%s, %s, %s, %s): %s',
+                       host, file_format, service, date, error)
+        return []
+    else:
+        decoded = simplejson.loads(resp.read())
+
+    #return record['file'] for record in decoded['files']]
+    return decoded['files']
+
+
 ## Parse Command Line Arguments
 def setup_parser():
     """ Sets up the parser with the good options
@@ -321,7 +381,7 @@ def setup_parser():
     return args[0]
 
 
-def test():
+def start_single():
     """ Tests a single instance """
     args = setup_parser()
 
@@ -366,9 +426,6 @@ def test():
     if not args.host or not args.file_format or not args.service:
         usage()
         sys.exit(os.EX_USAGE)
-    # Set today's date !!! UTC
-
-    date = str(datetime.datetime.utcnow().date())
 
     options = {}
     if args.map_file:
@@ -376,19 +433,20 @@ def test():
     if args.noop:
         options['noop'] = args.noop
     if args.date:
+        try:
+            datetime.datetime.strptime(args.date, '%Y-%m-%d')
+        except ValueError:
+            raise SyntaxError('date should respect this format: YYYY-MM-DD')
         options['date'] = args.date
+    else:
+        options['date'] = str(datetime.datetime.utcnow().date())
 
-    records = af_sync_multi.get_file_list(host, file_format, service,
-                                          options['date'] or date)
-    for record in records:
-        instance = AFSingle(host=host, service=service,
-                            file_format=file_format,
-                            record=record,
-                            options=options,
-                            logger=logger)
-        instance.process()
-        del(instance)
+    instance = AFSingle(host=host, service=service,
+                        file_format=file_format,
+                        options=options,
+                        logger=logger)
+    while instance.step():
+        pass
 
 if __name__ == '__main__':
-    import af_sync_multi
-    test()
+    start_single()
