@@ -44,7 +44,6 @@ def create_handler(name, handler_key, level, log_format, option=None):
     handlers_mapping = {
         'file': logging.FileHandler,
         'email': logging.handlers.SMTPHandler,
-        'file debug': logging.FileHandler,
         'stream': logging.StreamHandler
     }
     if option is not None:
