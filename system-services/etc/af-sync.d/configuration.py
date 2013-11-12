@@ -24,8 +24,6 @@ LOCK_FILE = '/var/lock/subsys/af-sync.lock'
 # Other
 INTER_DELTA_SLEEP_TIME = 750
 DELTA_RETRIES = 2
-# No progress sleep time
-NP_SLEEP_TIME = 120000
 CHUNK_SIZE = 520160
 
 PORT_NUMBER = 11111
@@ -33,4 +31,4 @@ CONFIG_PATH = '/etc/af-sync.d/af-sync.conf'
 
 LOG_LEVEL = 2
 VERB_LEVEL = 1
-NP_SLEEP_TIME = 20
+NP_SLEEP_TIME = 20000
