@@ -231,6 +231,7 @@ class Delta(object):
             # HTTP 416: Requested Range Not Satisfiable responses
             data_length = 0
             resp_code = error.code
+            self.failures += 1
         except urllib2.URLError, error:
             # If a firewall is blocking access, you get:
             # 113, 'No route to host'
@@ -241,6 +242,7 @@ class Delta(object):
         else:
             data_length = int(http_resp.headers.getheader('content-length'))
             resp_code = http_resp.code
+            self.failures += 1
 
         # If the file size hasn't changed since the last request, some servers
         # return a 200 response and the full file.
