@@ -188,21 +188,21 @@ class AFSingle(object):
             # actually download the data
             delta = Delta(req_uri, self.target_file, operation=self.operation,
                           logger=self.logger)
-            delta_failures = 0
-            while delta_failures <= configuration.DELTA_RETRIES:
+            delta.failures = 0
+            while delta.failures <= configuration.DELTA_RETRIES:
                 while delta.fetch():
                     # Successful update - reset failure count and sleep
-                    delta_failures = 0
+                    delta.failures = 0
                     self.logger.debug('Delta success - About to sleep '
                                       'for %d ms',
                                       configuration.INTER_DELTA_SLEEP_TIME)
                     time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
 
                 # Unsuccessful update - mark as a failure and sleep
-                delta_failures += 1
+                delta.failures += 1
                 self.logger.debug('Delta failed %d time(s) '
                                   '- About to sleep for %d ms',
-                                  delta_failures,
+                                  delta.failures,
                                   configuration.INTER_DELTA_SLEEP_TIME)
                 time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
 
@@ -271,7 +271,6 @@ class Delta(object):
             # HTTP 416: Requested Range Not Satisfiable responses
             data_length = 0
             resp_code = error.code
-            self.failures += 1
         except urllib2.URLError, error:
             # If a firewall is blocking access, you get:
             # 113, 'No route to host'
@@ -282,7 +281,6 @@ class Delta(object):
         else:
             data_length = int(http_resp.headers.getheader('content-length'))
             resp_code = http_resp.code
-            self.failures += 1
 
         # If the file size hasn't changed since the last request, some servers
         # return a 200 response and the full file.
@@ -297,16 +295,18 @@ class Delta(object):
         # TODO:
         # 3 conditions
         if (offset != 0 and resp_code != 206) or data_length <= 0:
-            self.logger.info('Delta failure %d: Offset: %d '
-                             'HTTP_STATUS_CODE: %d data_length: %d',
-                             self.failures + 1, offset, resp_code, data_length)
+            self.logger.debug('Delta failure %d: Offset: %d '
+                              'HTTP_STATUS_CODE: %d data_length: %d',
+                              self.failures + 1, offset,
+                              resp_code, data_length)
             return False
 
         # No operation
         if not self.operation:
-            self.logger.info('Dry run %d: Offset: %d '
-                             'HTTP_STATUS_CODE: %d data_length: %d',
-                             self.failures + 1, offset, resp_code, data_length)
+            self.logger.debug('Dry run %d: Offset: %d '
+                              'HTTP_STATUS_CODE: %d data_length: %d',
+                              self.failures + 1, offset, resp_code,
+                              data_length)
             return False
 
         # Write the update and flush to disk
