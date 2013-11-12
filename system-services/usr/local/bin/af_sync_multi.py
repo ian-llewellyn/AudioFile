@@ -173,6 +173,7 @@ class AFMulti(object):
         # The way it is now, it will stop at the end of the day
         self.date = date
         self.target_file = ''
+        self.list_instances = []
 
     def run(self, args):
         """ Run the process of going through all the
@@ -180,35 +181,13 @@ class AFMulti(object):
         the files """
         self.logger.debug('AF Sync Multi Instance running')
 
-        no_progress_sleep_time = 0
-        list_instances = []
+        self.configure()
+        no_progress_sleep_time = 1000
+
         while True:
-            for config in self.config:
-                host = config['host']
-                service = config['service']
-                file_formats = config['file_formats']
-                map_file = config['map_file']
-
-                # Get the the records for a specific host,
-                # service and format
-                list_handlers = []
-                for file_format in file_formats:
-
-                    options = {'map_file': map_file}
-                    if self.date is not None:
-                        options['date'] = self.date
-
-                    # Here is the most important part
-                    # This is where where we create the instance and start
-                    # it
-                    self.logger.info('New instance of AFSingle: %(host)s, '
-                                     '%(file_format)s, %(service)s', locals())
-                    instance = AFSingle(host=host,
-                                        file_format=file_format,
-                                        service=service,
-                                        options=options)
-                    instance.step()
-                    self.target_file = instance.target_file
+            for instance in self.list_instances:
+                self.target_file = instance.target_file
+                instance.step()
             # If no progress is made, we don't want the script
             # going to 100% CPU. Back off..
             if(no_progress_sleep_time >
@@ -218,8 +197,8 @@ class AFMulti(object):
                                     'About to sleep for %d ms',
                                     no_progress_sleep_time)
             else:
-                self.logger.info('No progress - About to sleep for %d ms',
-                                 no_progress_sleep_time)
+                self.logger.info('No progress - About to sleep for %d seconds',
+                                 no_progress_sleep_time/1000)
 
                 time.sleep(no_progress_sleep_time / 1000)
                 no_progress_sleep_time = (no_progress_sleep_time * 2
@@ -230,6 +209,33 @@ class AFMulti(object):
                 self.logger.info('No more updates for date: '
                                  '%s - Exiting', self.date)
                 return True
+
+    def configure(self):
+        self.list_instances = []
+        for config in self.config:
+            host = config['host']
+            service = config['service']
+            file_formats = config['file_formats']
+            map_file = config['map_file']
+
+            # Get the the records for a specific host,
+            # service and format
+            for file_format in file_formats:
+
+                options = {'map_file': map_file}
+                if self.date is not None:
+                    options['date'] = self.date
+
+                # Here is the most important part
+                # This is where where we create the instance and start
+                # it
+                self.logger.info('New instance of AFSingle: %(host)s, '
+                                 '%(file_format)s, %(service)s', locals())
+                instance = AFSingle(host=host,
+                                    file_format=file_format,
+                                    service=service,
+                                    options=options)
+                self.list_instances.append(instance)
 
     def fullstatus(self):
         """ Get the full status using the status method """
@@ -302,6 +308,7 @@ class AFMulti(object):
         # the config
         lock.acquire()
         self.config = self._parse_config(g_config.CONFIG_PATH)
+        self.configure()
         lock.release()
         message = 'Configuration has been loaded'
         self.server.send(message)
