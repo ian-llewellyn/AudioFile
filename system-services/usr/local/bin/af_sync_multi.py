@@ -17,9 +17,9 @@ import thread
 
 # local modules
 sys.path.append('/etc/af-sync.d/')
-import configuration as g_config
 sys.path.append('/usr/local/bin/')
 sys.path.append('/usr/local/lib/')
+import configuration as g_config
 import af_sync_single as afs
 from af_sync_single import AFSingle
 import logging_functions as lf
@@ -126,7 +126,7 @@ class AFMulti(object):
         # the one that will generates messages if an error happens
         # on the server for example (connection issue is an example)
         self.logger = logging.getLogger('multi')
-        self.logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
+        self.logger.setLevel(log_dict['STDERR']['log_level'])
 
         if not start_server:
             handler = lf.create_handler(
@@ -136,39 +136,20 @@ class AFMulti(object):
                 log_format=self.log_dict['GENERAL']['log_format']
             )
             self.logger.addHandler(handler)
+
         handler = lf.create_handler(
-            name='multi stream' % locals(),
+            name='multi file' % locals(),
             handler_key='file',
             level=self.log_dict['LOGFILE']['log_level'],
             log_format=self.log_dict['GENERAL']['log_format'],
             option=log_dict['LOGFILE']['log_file'] % 'multi'
         )
         self.logger.addHandler(handler)
-        handler = lf.create_handler(
-            name='multi stream' % locals(),
-            handler_key='file debug',
-            level=self.log_dict['LOGFILE DEBUG']['log_level'],
-            log_format=self.log_dict['GENERAL']['log_format'],
-            option=log_dict['LOGFILE DEBUG']['log_file'] % 'multi'
-        )
-        self.logger.addHandler(handler)
-
-        # self.single_logger is the logger that will display all the logging
-        # messages for AFSingle
-        self.single_logger = logging.getLogger(__name__)
         # We create the StreamHandler here, and not with the other ones since
         # this is one will remain open all the time
-        if not start_server:
-            handler = lf.create_handler(
-                name='stream multi' % locals(),
-                handler_key='stream',
-                level=self.log_dict['STDERR']['log_level'],
-                log_format=self.log_dict['GENERAL']['log_format'],
-            )
-            self.single_logger.addHandler(handler)
+        # We can not create a stream handler to STDERR
+        # if we're running the program as a daemon, it would crash
         # propagate turned off, so what is printed doesn't appear twice
-        self.single_logger.propagate = False
-        self.single_logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
         # We disable the propagation so the children of root
         # won't return it the messages, and so, they won't appear twice
 
@@ -199,8 +180,6 @@ class AFMulti(object):
         the files """
         self.logger.debug('AF Sync Multi Instance running')
 
-        processed = 0
-
         no_progress_sleep_time = 0
         list_instances = []
         while True:
@@ -212,10 +191,9 @@ class AFMulti(object):
 
                 # Get the the records for a specific host,
                 # service and format
+                list_handlers = []
                 for file_format in file_formats:
 
-                    handlers = self._create_single_handlers(service,
-                                                            file_format)
                     options = {'map_file': map_file}
                     if self.date is not None:
                         options['date'] = self.date
@@ -223,17 +201,14 @@ class AFMulti(object):
                     # Here is the most important part
                     # This is where where we create the instance and start
                     # it
+                    self.logger.info('New instance of AFSingle: %(host)s, '
+                                     '%(file_format)s, %(service)s', locals())
                     instance = AFSingle(host=host,
                                         file_format=file_format,
                                         service=service,
-                                        options=options,
-                                        logger=self.single_logger)
-                    list_instances.append(instance)
-                    self.target_file = instance.target_file
-                for instance in list_instances:
+                                        options=options)
                     instance.step()
-                    processed += 1
-            self._delete_single_handlers(handlers)
+                    self.target_file = instance.target_file
             # If no progress is made, we don't want the script
             # going to 100% CPU. Back off..
             if(no_progress_sleep_time >
@@ -249,57 +224,12 @@ class AFMulti(object):
                 time.sleep(no_progress_sleep_time / 1000)
                 no_progress_sleep_time = (no_progress_sleep_time * 2
                                           + 1000)
-            processed = 0
             # We end the process when a date has been passed in and we have
             # downloaded all the files
             if self.date is not None:
                 self.logger.info('No more updates for date: '
                                  '%s - Exiting', self.date)
                 return True
-
-    def _delete_single_handlers(self, handlers):
-        """ We remove the handlers we created for this AFSingle
-        instance """
-        for handler in handlers:
-            if handler in self.single_logger.handlers:
-                index = self.single_logger.handlers.index(handler)
-                # Close the open file
-                handler.close()
-                del(self.single_logger.handlers[index])
-
-    def _create_single_handlers(self, service, file_format):
-        """ That's where we create the handlers for AFSingle
-        (only the file handlers as we close it when the job is
-        done) """
-        handlers = []
-
-        filename = (self.log_dict['LOGFILE']['log_file']
-                    % ('%(service)s-%(file_format)s' % locals()))
-        filename_debug = (
-            self.log_dict['LOGFILE DEBUG']['log_file']
-            % ('%(service)s-%(file_format)s' % locals())
-        )
-        handler = lf.create_handler(
-            name='%(service)s-%(file_format)s' % locals(),
-            handler_key='file',
-            level=self.log_dict['LOGFILE']['log_level'],
-            log_format=self.log_dict['GENERAL']['log_format'],
-            option=filename
-        )
-        handlers.append(handler)
-
-        handler = lf.create_handler(
-            name='%(service)s-%(file_format)s' % locals(),
-            handler_key='file debug',
-            level=self.log_dict['LOGFILE DEBUG']['log_level'],
-            log_format=self.log_dict['GENERAL']['log_format'],
-            option=filename_debug
-        )
-        handlers.append(handler)
-
-        for handler in handlers:
-            self.single_logger.addHandler(handler)
-        return handlers
 
     def fullstatus(self):
         """ Get the full status using the status method """
@@ -316,20 +246,24 @@ class AFMulti(object):
         }
 
         new_config = self._parse_config(g_config.CONFIG_PATH)
-        configured = len(self.config)
+        # 1 service, 1 host, 1 or 2 file formats
+        # -> Returns 1 or 2 per config
+        configured = sum([len(conf['file_formats']) for conf in self.config])
         output += 'Configured instances: %(configured)d\n' % locals()
 
         running = 0
         for config in new_config:
             if config in self.config:
-                running += 1
+                for file_format in config['file_formats']:
+                    running += 1
         output += 'Configured and running: %(diff)d\n' % {'diff': running}
 
         diff = 0
 
         for config in new_config:
             if config not in self.config:
-                diff += 1
+                for file_format in config['file_formats']:
+                    diff += 1
         output += 'Configured and not running: %(diff)d\n' % {
             'diff': diff
         }
@@ -337,7 +271,8 @@ class AFMulti(object):
         diff = 0
         for config in self.config:
             if config not in new_config:
-                diff += 1
+                for file_format in config['file_formats']:
+                    diff += 1
         output += 'Running but not configured: %(diff)d\n' % {'diff': diff}
 
         if full:

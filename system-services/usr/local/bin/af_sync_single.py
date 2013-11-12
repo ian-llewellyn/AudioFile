@@ -22,8 +22,8 @@ import logging_functions as lf
 
 class AFSingle(object):
     """ Single process. It creates deltas objects """
-    def __init__(self, host, service, file_format, logger,
-                 options=None, date=None):
+    def __init__(self, host, service, file_format,
+                 options=None, date=None, logger=None):
         """ Constructor of the class. Parameters:
             - host: string that represents the hostname
             - file_format: a string that represents the file format (mp2, mp3)
@@ -33,6 +33,7 @@ class AFSingle(object):
                 It's expecting the keys: 'date', 'noop', 'map_file'
                 and won't do anything about the other keys
         """
+        self.log_dict = lf.get_log_conf(service, file_format)
 
         self.deltas = []
         self.number_of_iterations = 0
@@ -54,7 +55,19 @@ class AFSingle(object):
         self.records = get_file_list(host, file_format, service,
                                      self.date)
 
-        self.logger = logger
+        name = '%(service)s_%(file_format)s' % locals()
+        self.logger = logger or logging.getLogger(name)
+        if logger is None:
+            handler = lf.create_handler(
+                name=name,
+                handler_key='file',
+                level=self.log_dict['LOGFILE']['log_level'],
+                log_format=self.log_dict['GENERAL']['log_format'],
+                option=self.log_dict['LOGFILE']['log_file']
+            )
+            self.logger.addHandler(handler)
+            self.logger.propagate = False
+            self.logger.setLevel(self.log_dict['LOGFILE']['log_level'])
 
     @property
     def target_file(self):
@@ -369,13 +382,14 @@ def setup_parser():
 
     parser.remove_option('-h')
 
-    parser.add_option('-h', '--host', dest='host', type=str, nargs=1,
+    parser.add_option('-h', '--host', dest='host', type=str,
                       help='The host where the data comes from')
-    parser.add_option('-f', '--format', dest='file_format', type=str, nargs=1)
-    parser.add_option('-s', '--service', dest='service', type=str, nargs=1)
-    parser.add_option('-d', '--date', dest='date', type=str, nargs=1)
-    parser.add_option('-m', '--map-file', dest='map_file', type=str, nargs=1)
-    parser.add_option('-v', '--verbose', dest='verbosity', type=str, nargs=1)
+    parser.add_option('-f', '--format', dest='file_format', type=str)
+    parser.add_option('-s', '--service', dest='service', type=str)
+    parser.add_option('-d', '--date', dest='date', type=str)
+    parser.add_option('-m', '--map-file', dest='map_file', type=str)
+    parser.add_option('-v', '--verbose', dest='verbosity',
+                      action='store', default='INFO')
     parser.add_option('-n', '--noop', dest='noop', action='store_true',
                       default=False)
 
@@ -387,19 +401,20 @@ def start_single():
     """ Tests a single instance """
     args = setup_parser()
 
+    verbosity = args.verbosity
     host = args.host
     file_format = args.file_format
     service = args.service
 
     log_dict = lf.get_log_conf(service, file_format)
     logger = logging.getLogger(__name__)
-    logger.setLevel(log_dict['LOGFILE DEBUG']['log_level'])
+    logger.setLevel(verbosity)
     logger.propagate = False
 
     handler = lf.create_handler(
         name='stream multi' % locals(),
         handler_key='stream',
-        level=log_dict['STDERR']['log_level'],
+        level=verbosity,
         log_format=log_dict['GENERAL']['log_format'],
     )
     logger.addHandler(handler)
@@ -411,8 +426,6 @@ def start_single():
             logging.critical('Please provide a good verbosity option: '
                              'DEBUG, INFO, WARNING, ERROR or CRITICAL')
             sys.exit()
-        else:
-            log_dict['LOGFILE DEBUG']['log_level'] = log_level
 
     #lf.setup_log_handlers(logger, log_dict)
     ## System Integrity Checks
