@@ -52,8 +52,8 @@ class AFSingle(object):
                 self.operation = not options['noop']
             if 'map_file' in options:
                 self.map_file = options['map_file']
-        self.records = get_file_list(host, file_format, service,
-                                     self.date)
+        self.records = self.get_file_list(host, file_format, service,
+                                          self.date)
 
         name = '%(service)s_%(file_format)s' % locals()
         self.logger = logger or logging.getLogger(name)
@@ -85,8 +85,43 @@ class AFSingle(object):
     def size(self):
         return self.records[self.number_of_iterations]['size']
 
+    def get_file_list(self, host, file_format, service, date):
+        """ get_file_list(host, format, service, date) -> [
+            {'title': '01:00:00', 'file': '2012-08-30-00-00-00-00.mp2',
+             'size': 123456}*
+        ]
+        Returns an array from the directory listing received by a HTTP call
+        such as: http://host/format/service/date/
+        """
+        # If date is None that means that we didn't pass in a date, so we keep
+        # downloading file and refreshing this date variable to get
+        # the latest files
+        if date is None:
+            date = str(datetime.datetime.utcnow().date())
+        url = ('http://%s/webservice/v2/listfiles.php'
+               '?format=%s&service=%s&date=%s'
+               % (host, file_format, service, date))
+        logging.debug('Getting file list at: %s', url)
+        req = urllib2.Request(url)
+        try:
+            resp = urllib2.urlopen(req)
+        except urllib2.URLError, error:
+            # If a firewall is blocking access, you get:
+            # 113, 'No route to host'
+            self.logger.warning('Received URLError in function: '
+                                'get_file_list(%s, %s, %s, %s): %s',
+                                host, file_format, service, date, error)
+            return []
+        else:
+            decoded = simplejson.loads(resp.read())
+
+        #return record['file'] for record in decoded['files']]
+        return decoded['files']
+
     def step(self):
         """ Process the single instance """
+        self.records = self.get_file_list(self.host, self.file_format,
+                                          self.service, self.date)
         recent_truncations = []
         try:
             # Get a list of files for this date from the server
@@ -124,6 +159,11 @@ class AFSingle(object):
                 self.logger.info('Target File: %s has same size as '
                                  'Source File: %s', self.target_file,
                                  self.filename)
+                if (self.number_of_iterations+1) < len(self.records):
+                    self.number_of_iterations += 1
+                    return True
+                else:
+                    return False
 
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
@@ -339,40 +379,6 @@ def utc_file_to_local(file_title):
 
     # Return
     return (int(dow), hour)
-
-
-def get_file_list(host, file_format, service, date):
-    """ get_file_list(host, format, service, date) -> [
-        {'title': '01:00:00', 'file': '2012-08-30-00-00-00-00.mp2',
-         'size': 123456}*
-    ]
-    Returns an array from the directory listing received by a HTTP call such
-    as: http://host/format/service/date/
-    """
-    logger = logging.getLogger(__name__)
-
-    # If date is None that means that we didn't pass in a date, so we keep
-    # downloading file and refreshing this date variable to get
-    # the latest files
-    if date is None:
-        date = str(datetime.datetime.utcnow().date())
-    url = ('http://%s/webservice/v2/listfiles.php?format=%s&service=%s&date=%s'
-           % (host, file_format, service, date))
-    logging.debug('Getting file list at: %s', url)
-    req = urllib2.Request(url)
-    try:
-        resp = urllib2.urlopen(req)
-    except urllib2.URLError, error:
-        # If a firewall is blocking access, you get: 113, 'No route to host'
-        logger.warning('Received URLError in function: '
-                       'get_file_list(%s, %s, %s, %s): %s',
-                       host, file_format, service, date, error)
-        return []
-    else:
-        decoded = simplejson.loads(resp.read())
-
-    #return record['file'] for record in decoded['files']]
-    return decoded['files']
 
 
 ## Parse Command Line Arguments

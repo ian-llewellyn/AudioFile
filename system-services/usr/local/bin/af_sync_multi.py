@@ -20,7 +20,6 @@ sys.path.append('/etc/af-sync.d/')
 sys.path.append('/usr/local/bin/')
 sys.path.append('/usr/local/lib/')
 import configuration as g_config
-import af_sync_single as afs
 from af_sync_single import AFSingle
 import logging_functions as lf
 
@@ -312,22 +311,6 @@ class AFMulti(object):
         lock.release()
         message = 'Configuration has been loaded'
         self.server.send(message)
-
-    def get_files_to_update(self):
-        """ Gets all the files that can be downloaded based on
-        the different hosts/service/formats """
-        logging.debug('Getting files to update')
-        records_map = {}
-        for config in self.config:
-            host = config['host']
-            service = config['service']
-            file_formats = config['file_formats']
-            for file_format in file_formats:
-                list_files = afs.get_file_list(host, file_format,
-                                               service, self.date)
-
-                records_map[(host, service, file_format)] = list_files
-        return records_map
 
     def _parse_config(self, config_path):
         """ expand_config(config_file) -> [ ( SyncInstance )* ]
