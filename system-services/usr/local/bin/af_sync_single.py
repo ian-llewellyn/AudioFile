@@ -134,7 +134,6 @@ class AFSingle(object):
                 return
 
             # Reset variable for each file that's encountered
-            delta_failures = 0
 
             # Prepare the file or skip it altogether!
             if(self.filename != os.path.basename(self.target_file)
@@ -189,6 +188,7 @@ class AFSingle(object):
             # actually download the data
             delta = Delta(req_uri, self.target_file, operation=self.operation,
                           logger=self.logger)
+            delta_failures = 0
             while delta_failures <= configuration.DELTA_RETRIES:
                 while delta.fetch():
                     # Successful update - reset failure count and sleep
