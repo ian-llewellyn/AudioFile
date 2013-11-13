@@ -23,7 +23,7 @@ import logging_functions as lf
 class AFSingle(object):
     """ Single process. It creates deltas objects """
     def __init__(self, host, service, file_format,
-                 options=None, date=None, logger=None):
+                 options=None, logger=None):
         """ Constructor of the class. Parameters:
             - host: string that represents the hostname
             - file_format: a string that represents the file format (mp2, mp3)
@@ -40,23 +40,24 @@ class AFSingle(object):
         self.host = host
         self.file_format = file_format
         self.service = service
-        self.date = date
+        self.operation = True
+        self.map_file = None
+        self.date = None
         self.operation = True
         self.map_file = None
         if options is not None:
             if 'date' in options:
                 self.date = options['date']
-            else:
-                self.date = None
             if 'noop' in options:
                 self.operation = not options['noop']
             if 'map_file' in options:
                 self.map_file = options['map_file']
-        self.records = self.get_file_list(host, file_format, service,
-                                          self.date)
 
         name = '%(service)s_%(file_format)s' % locals()
         self.logger = logger or logging.getLogger(name)
+        self.records = self.get_file_list(self.date)
+        self.__iter__record = self._get__iter__()
+
         if logger is None:
             handler = lf.create_handler(
                 name=name,
@@ -69,8 +70,16 @@ class AFSingle(object):
             self.logger.propagate = False
             self.logger.setLevel(self.log_dict['LOGFILE']['log_level'])
 
+    def _get__iter__(self):
+        return self.records.__iter__()
+
+    def next_item(self):
+        return self.__iter__record.next()
+
     @property
     def target_file_fp(self):
+        if self.target_path is None:
+            return None
         try:
             tgt_fp = open(self.target_path, 'ab')
         except IOError:
@@ -81,21 +90,29 @@ class AFSingle(object):
 
     @property
     def target_path(self):
+        if self.number_of_iterations >= len(self.records):
+            return None
         record = self.records[self.number_of_iterations]
         filename = record['file']
-        return file_map(self.date, self.map_file,
+        folder_datetime = datetime.datetime.strptime(filename,
+                                                     '%Y-%m-%d-%H-%M-%S-%f.'
+                                                     + self.file_format)
+        date = folder_datetime.strftime('%Y-%m-%d')
+        return file_map(date, self.map_file,
                         filename,
                         self.file_format, self.service)
 
     @property
     def filename(self):
+        if self.number_of_iterations >= len(self.records):
+            return None
         return self.records[self.number_of_iterations]['file']
 
     @property
     def size(self):
         return self.records[self.number_of_iterations]['size']
 
-    def get_file_list(self, host, file_format, service, date):
+    def get_file_list(self, date):
         """ get_file_list(host, format, service, date) -> [
             {'title': '01:00:00', 'file': '2012-08-30-00-00-00-00.mp2',
              'size': 123456}*
@@ -106,12 +123,13 @@ class AFSingle(object):
         # If date is None that means that we didn't pass in a date, so we keep
         # downloading file and refreshing this date variable to get
         # the latest files
+        date = self.date
         if date is None:
             date = str(datetime.datetime.utcnow().date())
         url = ('http://%s/webservice/v2/listfiles.php'
                '?format=%s&service=%s&date=%s'
-               % (host, file_format, service, date))
-        logging.debug('Getting file list at: %s', url)
+               % (self.host, self.file_format, self.service, date))
+        self.logger.debug('Getting file list at: %s', url)
         req = urllib2.Request(url)
         try:
             resp = urllib2.urlopen(req)
@@ -120,7 +138,8 @@ class AFSingle(object):
             # 113, 'No route to host'
             self.logger.warning('Received URLError in function: '
                                 'get_file_list(%s, %s, %s, %s): %s',
-                                host, file_format, service, date, error)
+                                self.host, self.file_format,
+                                self.service, date, error)
             return []
         else:
             decoded = simplejson.loads(resp.read())
@@ -132,6 +151,8 @@ class AFSingle(object):
         Does a HTTP range request to http://host/format/service/date/file
         fetching only the bytes beyond the end of the target_file size.
         """
+        if target_file is None:
+            return False
         target_path = self.target_path
         # Move file pointer to the end of the file
         target_file.seek(0, 2)
@@ -217,6 +238,7 @@ class AFSingle(object):
                 # I can't possibly go on - I have no target!
                 self.logger.warning('file_map returned no target file '
                                     'for source file: %s', self.filename)
+                self.next_item()
                 return
 
             # Reset variable for each file that's encountered
@@ -245,11 +267,7 @@ class AFSingle(object):
                 self.logger.info('Target File: %s has same size as '
                                  'Source File: %s', self.target_path,
                                  self.filename)
-                if (self.number_of_iterations+1) < len(self.records):
-                    self.number_of_iterations += 1
-                    return True
-                else:
-                    return False
+                self.next_item()
 
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
@@ -290,24 +308,26 @@ class AFSingle(object):
                                   delta_failures,
                                   configuration.INTER_DELTA_SLEEP_TIME)
                 time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
-                self.records = self.get_file_list(self.host, self.file_format,
-                                                  self.service, self.date)
+                records = self.get_file_list(self.date)
+                self.records.extend([e for e in records if e not in
+                                     self.records])
 
             # (at least once an hour - more if errors)
             self.logger.info('Delta retries: %d exceeded',
                              configuration.DELTA_RETRIES)
             # Here we close the file
-            self.target_file_fp.close()
+            if self.target_file_fp is not None:
+                self.target_file_fp.close()
 
         except:
             self.logger.exception('Caught unhandled exception')
             raise
 
-        if (self.number_of_iterations+1) < len(self.records):
-            self.number_of_iterations += 1
-            return True
-        else:
-            return False
+        self.next_item()
+
+    def __str__(self):
+        return ('<AFSingle: Host: %s, Service: %s, Format: %s>'
+                % (self.host, self.service, self.file_format))
 
 
 ## Local Function Definitions
@@ -322,7 +342,6 @@ def file_map(date, map_file, src_file, file_format, service):
     For a given source file, do a lookup in the map and return the
     relevant target file.
     """
-    date = date or str(datetime.datetime.utcnow().date())
     if not map_file:
         return os.path.sep.join(
             [configuration.AUDIOFILE_DAY_CACHE_STORAGE, file_format,
@@ -450,8 +469,6 @@ def start_single():
         except ValueError:
             raise SyntaxError('date should respect this format: YYYY-MM-DD')
         options['date'] = args.date
-    else:
-        options['date'] = str(datetime.datetime.utcnow().date())
 
     instance = AFSingle(host=host, service=service,
                         file_format=file_format,

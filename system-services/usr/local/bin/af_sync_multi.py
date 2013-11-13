@@ -186,7 +186,14 @@ class AFMulti(object):
         while True:
             for instance in self.list_instances:
                 self.target_file = instance.target_path
-                instance.step()
+                try:
+                    instance.step()
+                except StopIteration:
+                    self.logger.debug(
+                        'Get file list from server for instance: %s',
+                        instance
+                    )
+                    instance.get_file_list(instance.date)
             # If no progress is made, we don't want the script
             # going to 100% CPU. Back off..
             if(no_progress_sleep_time >
