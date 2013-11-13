@@ -94,10 +94,7 @@ class AFSingle(object):
             return None
         record = self.records[self.number_of_iterations]
         filename = record['file']
-        folder_datetime = datetime.datetime.strptime(filename,
-                                                     '%Y-%m-%d-%H-%M-%S-%f.'
-                                                     + self.file_format)
-        date = folder_datetime.strftime('%Y-%m-%d')
+        date = '-'.join(filename.split('-')[:3])
         return file_map(date, self.map_file,
                         filename,
                         self.file_format, self.service)
@@ -476,6 +473,7 @@ def start_single():
                         logger=logger)
     while instance.step():
         pass
+
 
 if __name__ == '__main__':
     start_single()
