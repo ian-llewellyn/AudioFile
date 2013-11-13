@@ -70,7 +70,17 @@ class AFSingle(object):
             self.logger.setLevel(self.log_dict['LOGFILE']['log_level'])
 
     @property
-    def target_file(self):
+    def target_file_fp(self):
+        try:
+            tgt_fp = open(self.target_path, 'ab')
+        except IOError:
+            folder = os.path.sep.join(self.target_path.split(os.path.sep)[:-1])
+            os.makedirs(folder)
+            tgt_fp = open(self.target_path, 'ab')
+        return tgt_fp
+
+    @property
+    def target_path(self):
         record = self.records[self.number_of_iterations]
         filename = record['file']
         return file_map(self.date, self.map_file,
@@ -115,147 +125,25 @@ class AFSingle(object):
         else:
             decoded = simplejson.loads(resp.read())
 
-        #return record['file'] for record in decoded['files']]
         return decoded['files']
 
-    def step(self):
-        """ Process the single instance """
-        self.records = self.get_file_list(self.host, self.file_format,
-                                          self.service, self.date)
-        recent_truncations = []
-        try:
-            # Get a list of files for this date from the server
-            # and loop through them
-            # For ease...
-            if not self.target_file:
-                # I can't possibly go on - I have no target!
-                self.logger.warning('file_map returned no target file '
-                                    'for source file: %s', self.filename)
-                return
-
-            # Reset variable for each file that's encountered
-
-            # Prepare the file or skip it altogether!
-            if(self.filename != os.path.basename(self.target_file)
-               and self.target_file not in recent_truncations):
-                # A map file is being used, empty this file
-                # (it hasn't been done in over a day!)
-                self.logger.info('Truncated target file: %s', self.target_file)
-                try:
-                    open(self.target_file, 'w').truncate()
-                except IOError:
-                    directory_array = self.target_file.split(os.path.sep)[:-1]
-                    directory = os.path.sep.join(directory_array)
-                    os.makedirs(directory)
-                recent_truncations.append(self.target_file)
-                if len(recent_truncations) > 24:
-                    recent_truncations.remove(recent_truncations[0])
-
-            elif(os.path.isfile(self.target_file)
-                 and self.size == os.stat(self.target_file).st_size):
-                # Source and target files have the same size,
-                # so target is probably fully up-to-date
-                self.logger.info('Target File: %s has same size as '
-                                 'Source File: %s', self.target_file,
-                                 self.filename)
-                if (self.number_of_iterations+1) < len(self.records):
-                    self.number_of_iterations += 1
-                    return True
-                else:
-                    return False
-
-            # Work is to be done on this file
-            # (only if tgt_file size == 0) ?
-            self.logger.info('Target File: %s started', self.target_file)
-            today_string = str(datetime.datetime.utcnow().date())
-            req_uri = ('http://%(host)s/audio/%(file_format)s/%(service)s'
-                       '/%(date)s/%(filename)s' %
-                       {'host': self.host,
-                        'file_format': self.file_format,
-                        'service': self.service,
-                        'date': self.date and self.date or today_string,
-                        'filename': self.filename})
-
-            self.logger.info('Processing: Host: %(host)s, '
-                             'Service: %(service)s, '
-                             'Format: %(file_format)s, '
-                             'File: %(file_name)s',
-                             {'host': self.host,
-                              'service': self.service,
-                              'file_format': self.file_format,
-                              'file_name': self.filename})
-            # The Delta object is the object that will
-            # actually download the data
-            delta = Delta(req_uri, self.target_file, operation=self.operation,
-                          logger=self.logger)
-            delta.failures = 0
-            while delta.failures <= configuration.DELTA_RETRIES:
-                while delta.fetch():
-                    # Successful update - reset failure count and sleep
-                    delta.failures = 0
-                    self.logger.debug('Delta success - About to sleep '
-                                      'for %d ms',
-                                      configuration.INTER_DELTA_SLEEP_TIME)
-                    time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
-
-                # Unsuccessful update - mark as a failure and sleep
-                delta.failures += 1
-                self.logger.debug('Delta failed %d time(s) '
-                                  '- About to sleep for %d ms',
-                                  delta.failures,
-                                  configuration.INTER_DELTA_SLEEP_TIME)
-                time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
-
-            # (at least once an hour - more if errors)
-            self.logger.info('Delta retries: %d exceeded',
-                             configuration.DELTA_RETRIES)
-            # Here we close the file
-            delta.tgt_fp.close()
-
-        except:
-            self.logger.exception('Caught unhandled exception')
-            raise
-
-        if (self.number_of_iterations+1) < len(self.records):
-            self.number_of_iterations += 1
-            return True
-        else:
-            return False
-
-
-## Global Function Definitions
-class Delta(object):
-    """ Delta class that fetches the data from the server """
-    def __init__(self, uri, target_file, logger, operation=True):
-        """ Constructor. It needs a URI, and a target file """
-        self.logger = logger
-        self.uri = uri
-        self.target_file = target_file
-        self.operation = operation
-        try:
-            self.tgt_fp = open(self.target_file, 'ab')
-        except IOError:
-            folder = os.path.sep.join(self.target_file.split(os.path.sep)[:-1])
-            os.makedirs(folder)
-            self.tgt_fp = open(self.target_file, 'ab')
-        self.failures = 0
-
-    def fetch(self):
+    def fetch_delta(self, uri, target_file):
         """ fetch_delta(host, format, service) -> True/False
         Does a HTTP range request to http://host/format/service/date/file
         fetching only the bytes beyond the end of the target_file size.
         """
+        target_path = self.target_path
         # Move file pointer to the end of the file
-        self.tgt_fp.seek(0, 2)
+        target_file.seek(0, 2)
         # How many bytes have we got already?
-        offset = self.tgt_fp.tell()
-        self.logger.debug('File: %s has size: %d', self.target_file, offset)
+        offset = target_file.tell()
+        self.logger.debug('File: %s has size: %d', target_path, offset)
 
-        http_req = urllib2.Request(self.uri)
+        http_req = urllib2.Request(uri)
         # Only get updates - THIS IS THE MAGIC
         http_req.headers['Range'] = 'bytes=%s-' % offset
 
-        self.logger.debug('Requesting: %s', self.uri)
+        self.logger.debug('Requesting: %s', uri)
         try:
             http_resp = urllib2.urlopen(http_req)
         except urllib2.HTTPError, error:
@@ -276,7 +164,7 @@ class Delta(object):
             # 113, 'No route to host'
             self.logger.warning('Received URLError in function: '
                                 'fetch_delta(%s, %s): %s',
-                                self.uri, self.target_file, error)
+                                uri, target_path, error)
             return False
         else:
             data_length = int(http_resp.headers.getheader('content-length'))
@@ -291,34 +179,135 @@ class Delta(object):
         # 1. We're not at the start of the file and
         #    a partial content response was not recieved
         # 2. No data was received for update
-        offset = self.tgt_fp.tell()
+        offset = target_file.tell()
         # TODO:
         # 3 conditions
         if (offset != 0 and resp_code != 206) or data_length <= 0:
-            self.logger.debug('Delta failure %d: Offset: %d '
+            self.logger.debug('Delta failure: Offset: %d '
                               'HTTP_STATUS_CODE: %d data_length: %d',
-                              self.failures + 1, offset,
-                              resp_code, data_length)
+                              offset, resp_code, data_length)
             return False
 
         # No operation
         if not self.operation:
-            self.logger.debug('Dry run %d: Offset: %d '
+            self.logger.debug('Dry run: Offset: %d '
                               'HTTP_STATUS_CODE: %d data_length: %d',
-                              self.failures + 1, offset, resp_code,
-                              data_length)
+                              offset, resp_code, data_length)
             return False
 
         # Write the update and flush to disk
         chunk = True
         while chunk:
             chunk = http_resp.read(configuration.CHUNK_SIZE)
-            self.tgt_fp.write(chunk)
-            self.tgt_fp.flush()
+            target_file.write(chunk)
+            target_file.flush()
 
         self.logger.debug('Delta success: HTTP_STATUS_CODE: %d '
                           'data_length: %d', resp_code, data_length)
         return True
+
+    def step(self):
+        """ Process the single instance """
+        recent_truncations = []
+        try:
+            # Get a list of files for this date from the server
+            # and loop through them
+            # For ease...
+            if not self.target_path:
+                # I can't possibly go on - I have no target!
+                self.logger.warning('file_map returned no target file '
+                                    'for source file: %s', self.filename)
+                return
+
+            # Reset variable for each file that's encountered
+
+            # Prepare the file or skip it altogether!
+            if(self.filename != os.path.basename(self.target_path)
+               and self.target_path not in recent_truncations):
+                # A map file is being used, empty this file
+                # (it hasn't been done in over a day!)
+                self.logger.info('Truncated target file: %s', self.target_path)
+                try:
+                    open(self.target_path, 'w').truncate()
+                except IOError:
+                    directory_array = self.target_path.split(os.path.sep)[:-1]
+                    directory = os.path.sep.join(directory_array)
+                    os.makedirs(directory)
+                    open(self.target_path, 'w').truncate()
+                recent_truncations.append(self.target_path)
+                if len(recent_truncations) > 24:
+                    recent_truncations.remove(recent_truncations[0])
+
+            elif(os.path.isfile(self.target_path)
+                 and self.size == os.stat(self.target_path).st_size):
+                # Source and target files have the same size,
+                # so target is probably fully up-to-date
+                self.logger.info('Target File: %s has same size as '
+                                 'Source File: %s', self.target_path,
+                                 self.filename)
+                if (self.number_of_iterations+1) < len(self.records):
+                    self.number_of_iterations += 1
+                    return True
+                else:
+                    return False
+
+            # Work is to be done on this file
+            # (only if tgt_file size == 0) ?
+            self.logger.info('Target File: %s started', self.target_path)
+            today_string = str(datetime.datetime.utcnow().date())
+            req_uri = ('http://%(host)s/audio/%(file_format)s/%(service)s'
+                       '/%(date)s/%(filename)s' %
+                       {'host': self.host,
+                        'file_format': self.file_format,
+                        'service': self.service,
+                        'date': self.date and self.date or today_string,
+                        'filename': self.filename})
+
+            self.logger.info('Processing: Host: %(host)s, '
+                             'Service: %(service)s, '
+                             'Format: %(file_format)s, '
+                             'File: %(file_name)s',
+                             {'host': self.host,
+                              'service': self.service,
+                              'file_format': self.file_format,
+                              'file_name': self.filename})
+            # The Delta object is the object that will
+            # actually download the data
+            delta_failures = 0
+            while delta_failures <= configuration.DELTA_RETRIES:
+                while self.fetch_delta(req_uri, self.target_file_fp):
+                    # Successful update - reset failure count and sleep
+                    delta_failures = 0
+                    self.logger.debug('Delta success - About to sleep '
+                                      'for %d ms',
+                                      configuration.INTER_DELTA_SLEEP_TIME)
+                    time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
+
+                # Unsuccessful update - mark as a failure and sleep
+                delta_failures += 1
+                self.logger.debug('Delta failed %d time(s) '
+                                  '- About to sleep for %d ms',
+                                  delta_failures,
+                                  configuration.INTER_DELTA_SLEEP_TIME)
+                time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
+                self.records = self.get_file_list(self.host, self.file_format,
+                                                  self.service, self.date)
+
+            # (at least once an hour - more if errors)
+            self.logger.info('Delta retries: %d exceeded',
+                             configuration.DELTA_RETRIES)
+            # Here we close the file
+            self.target_file_fp.close()
+
+        except:
+            self.logger.exception('Caught unhandled exception')
+            raise
+
+        if (self.number_of_iterations+1) < len(self.records):
+            self.number_of_iterations += 1
+            return True
+        else:
+            return False
 
 
 ## Local Function Definitions

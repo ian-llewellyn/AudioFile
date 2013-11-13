@@ -185,7 +185,7 @@ class AFMulti(object):
 
         while True:
             for instance in self.list_instances:
-                self.target_file = instance.target_file
+                self.target_file = instance.target_path
                 instance.step()
             # If no progress is made, we don't want the script
             # going to 100% CPU. Back off..
