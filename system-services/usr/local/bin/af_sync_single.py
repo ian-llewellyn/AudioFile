@@ -16,9 +16,6 @@ import simplejson
 sys.path.append('/etc/af-sync.d')
 import configuration
 
-sys.path.append('/usr/local/lib')
-import logging_functions as lf
-
 
 class AFSingle(object):
     """ Single process. It creates deltas objects """
@@ -33,7 +30,7 @@ class AFSingle(object):
                 It's expecting the keys: 'date', 'noop', 'map_file'
                 and won't do anything about the other keys
         """
-        self.log_dict = lf.get_log_conf(service, file_format)
+        self.log_dict = get_log_conf(service, file_format)
 
         self.deltas = []
         self.host = host
@@ -59,7 +56,7 @@ class AFSingle(object):
         self.iter_item = self.iter()
         self.next_item()
         if logger is None:
-            handler = lf.create_handler(
+            handler = create_handler(
                 name=name,
                 handler_key='file',
                 level=self.log_dict['LOGFILE']['log_level'],
@@ -413,12 +410,12 @@ def start_single():
     file_format = args.file_format
     service = args.service
 
-    log_dict = lf.get_log_conf(service, file_format)
+    log_dict = get_log_conf(service, file_format)
     logger = logging.getLogger(__name__)
     logger.setLevel(verbosity)
     logger.propagate = False
 
-    handler = lf.create_handler(
+    handler = create_handler(
         name='stream multi' % locals(),
         handler_key='stream',
         level=verbosity,
@@ -468,6 +465,54 @@ def start_single():
     while instance.step():
         pass
 
+
+def get_log_conf(service=None, file_format=None, name=None):
+    if service and file_format:
+        parameters = '%s-%s' % (service, file_format)
+    elif name is not None:
+        parameters = 'multi'
+    else:
+        parameters = '%s'
+
+    log_dict = {
+        'LOGFILE': {
+            'log_level': configuration.LOGFILE_LOG_LEVEL,
+            'log_file': configuration.LOG_FILE % parameters,
+        },
+        'LOGFILE DEBUG': {
+            'log_level': configuration.LOGFILE_DEBUG_LOG_LEVEL,
+            'log_file': configuration.DEBUG_LOG_FILE % parameters,
+        },
+        'STDERR': {
+            'log_level': configuration.STDERR_LOG_LEVEL,
+        },
+        'EMAIL': {
+            'log_level': configuration.EMAIL_LOG_LEVEL,
+        },
+        'GENERAL': {
+            'log_format': configuration.LOG_FORMAT
+        }
+    }
+    return log_dict
+
+
+def create_handler(name, handler_key, level, log_format, option=None):
+    """ Given a new, a handler key a level, a log_format, and an option
+    (if the key is 'file' or 'file debug') returns a handler """
+    handlers_mapping = {
+        'file': logging.FileHandler,
+        'email': logging.handlers.SMTPHandler,
+        'stream': logging.StreamHandler
+    }
+    if option is not None:
+        handler = handlers_mapping[handler_key](option)
+    else:
+        handler = handlers_mapping[handler_key]()
+    handler.setLevel(level)
+    handler.name = name
+    formatter = logging.Formatter(log_format)
+    handler.setFormatter(formatter)
+    return handler
 
 if __name__ == '__main__':
     start_single()
