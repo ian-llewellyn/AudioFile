@@ -18,9 +18,10 @@ import thread
 # local modules
 sys.path.append('/etc/af-sync.d/')
 sys.path.append('/usr/local/bin/')
+sys.path.append('/usr/local/lib/')
 import configuration as g_config
 from af_sync_single import AFSingle
-from af_sync_single import create_handler, get_log_conf
+import logging_functions as lf
 
 
 class ConfigurationSyntaxError(Exception):
@@ -127,7 +128,7 @@ class AFMulti(object):
         self.logger.setLevel(log_dict['STDERR']['log_level'])
 
         if not start_server:
-            handler = create_handler(
+            handler = lf.create_handler(
                 name='multi stream' % locals(),
                 handler_key='stream',
                 level=self.log_dict['STDERR']['log_level'],
@@ -135,7 +136,7 @@ class AFMulti(object):
             )
             self.logger.addHandler(handler)
 
-        handler = create_handler(
+        handler = lf.create_handler(
             name='multi file' % locals(),
             handler_key='file',
             level=self.log_dict['LOGFILE']['log_level'],
@@ -412,7 +413,7 @@ def main(start_server=True):
     logger.propagate = False
     # We disable the propagation so the children of root won't return it the
     # messages, and so, they won't appear twice
-    log_dict = get_log_conf()
+    log_dict = lf.get_log_conf()
 
     args = setup_parser()
     config_file = args.config_file or g_config.CONFIG_PATH
