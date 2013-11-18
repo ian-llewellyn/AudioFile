@@ -36,7 +36,6 @@ class AFSingle(object):
         self.log_dict = lf.get_log_conf(service, file_format)
 
         self.deltas = []
-        self.number_of_iterations = 0
         self.host = host
         self.file_format = file_format
         self.service = service
@@ -56,8 +55,9 @@ class AFSingle(object):
         name = '%(service)s_%(file_format)s' % locals()
         self.logger = logger or logging.getLogger(name)
         self.records = self.get_file_list(self.date)
-        self.__iter__record = self._get__iter__()
 
+        self.iter_item = self.iter()
+        self.next_item()
         if logger is None:
             handler = lf.create_handler(
                 name=name,
@@ -70,11 +70,11 @@ class AFSingle(object):
             self.logger.propagate = False
             self.logger.setLevel(self.log_dict['LOGFILE']['log_level'])
 
-    def _get__iter__(self):
+    def iter(self):
         return self.records.__iter__()
 
     def next_item(self):
-        return self.__iter__record.next()
+        self.current_record = self.iter_item.next()
 
     @property
     def target_file_fp(self):
@@ -90,24 +90,18 @@ class AFSingle(object):
 
     @property
     def target_path(self):
-        if self.number_of_iterations >= len(self.records):
-            return None
-        record = self.records[self.number_of_iterations]
-        filename = record['file']
-        date = '-'.join(filename.split('-')[:3])
+        date = '-'.join(self.filename.split('-')[:3])
         return file_map(date, self.map_file,
-                        filename,
+                        self.filename,
                         self.file_format, self.service)
 
     @property
     def filename(self):
-        if self.number_of_iterations >= len(self.records):
-            return None
-        return self.records[self.number_of_iterations]['file']
+        return self.current_record['file']
 
     @property
     def size(self):
-        return self.records[self.number_of_iterations]['size']
+        return self.current_record['size']
 
     def get_file_list(self, date):
         """ get_file_list(host, format, service, date) -> [
@@ -269,13 +263,13 @@ class AFSingle(object):
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
             self.logger.info('Target File: %s started', self.target_path)
-            today_string = str(datetime.datetime.utcnow().date())
+            file_date = '-'.join(self.filename.split('-')[:3])
             req_uri = ('http://%(host)s/audio/%(file_format)s/%(service)s'
                        '/%(date)s/%(filename)s' %
                        {'host': self.host,
                         'file_format': self.file_format,
                         'service': self.service,
-                        'date': self.date and self.date or today_string,
+                        'date': file_date,
                         'filename': self.filename})
 
             self.logger.info('Processing: Host: %(host)s, '
