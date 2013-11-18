@@ -61,7 +61,7 @@ class AFSingle(object):
                 handler_key='file',
                 level=self.log_dict['LOGFILE']['log_level'],
                 log_format=self.log_dict['GENERAL']['log_format'],
-                option=self.log_dict['LOGFILE']['log_file']
+                options={'filename': self.log_dict['LOGFILE']['log_file']}
             )
             self.logger.addHandler(handler)
             self.logger.propagate = False
@@ -281,13 +281,8 @@ class AFSingle(object):
             # actually download the data
             delta_failures = 0
             while delta_failures <= configuration.DELTA_RETRIES:
-                while self.fetch_delta(req_uri, self.target_file_fp):
+                self.fetch_delta(req_uri, self.target_file_fp)
                     # Successful update - reset failure count and sleep
-                    delta_failures = 0
-                    self.logger.debug('Delta success - About to sleep '
-                                      'for %d ms',
-                                      configuration.INTER_DELTA_SLEEP_TIME)
-                    time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
 
                 # Unsuccessful update - mark as a failure and sleep
                 delta_failures += 1
@@ -496,7 +491,7 @@ def get_log_conf(service=None, file_format=None, name=None):
     return log_dict
 
 
-def create_handler(name, handler_key, level, log_format, option=None):
+def create_handler(name, handler_key, level, log_format, options=None):
     """ Given a new, a handler key a level, a log_format, and an option
     (if the key is 'file' or 'file debug') returns a handler """
     handlers_mapping = {
@@ -504,8 +499,8 @@ def create_handler(name, handler_key, level, log_format, option=None):
         'email': logging.handlers.SMTPHandler,
         'stream': logging.StreamHandler
     }
-    if option is not None:
-        handler = handlers_mapping[handler_key](option)
+    if options is not None:
+        handler = handlers_mapping[handler_key](**options)
     else:
         handler = handlers_mapping[handler_key]()
     handler.setLevel(level)

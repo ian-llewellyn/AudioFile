@@ -14,6 +14,7 @@ import socket
 import os
 import time
 import thread
+import datetime
 
 # local modules
 sys.path.append('/etc/af-sync.d/')
@@ -140,7 +141,18 @@ class AFMulti(object):
             handler_key='file',
             level=self.log_dict['LOGFILE']['log_level'],
             log_format=self.log_dict['GENERAL']['log_format'],
-            option=log_dict['LOGFILE']['log_file'] % 'multi'
+            options={'filename': log_dict['LOGFILE']['log_file'] % 'multi'}
+        )
+        self.logger.addHandler(handler)
+        handler = create_handler(
+            name='multi file' % locals(),
+            handler_key='email',
+            level=g_config.EMAIL_LOG_LEVEL,
+            log_format=self.log_dict['GENERAL']['log_format'],
+            options={'mailhost': 'localhost',
+                     'subject': 'AudioFile Real-Time Sync',
+                     'toaddrs': g_config.ADMIN_EMAILS,
+                     'fromaddr': 'Audiofile'}
         )
         self.logger.addHandler(handler)
         # We create the StreamHandler here, and not with the other ones since
@@ -236,11 +248,19 @@ class AFMulti(object):
                 # it
                 self.logger.info('New instance of AFSingle: %(host)s, '
                                  '%(file_format)s, %(service)s', locals())
-                instance = AFSingle(host=host,
-                                    file_format=file_format,
-                                    service=service,
-                                    options=options)
-                self.list_instances.append(instance)
+                try:
+                    instance = AFSingle(host=host,
+                                        file_format=file_format,
+                                        service=service,
+                                        options=options)
+                except StopIteration:
+                    self.logger.error('No files found for: '
+                                      'host: %s, file_format %s, service: %s '
+                                      'on the %s', host, file_format, service,
+                                      self.date or
+                                      str(datetime.datetime.utcnow().date()))
+                else:
+                    self.list_instances.append(instance)
 
     def fullstatus(self):
         """ Get the full status using the status method """
