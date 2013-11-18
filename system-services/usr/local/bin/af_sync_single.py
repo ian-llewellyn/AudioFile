@@ -30,9 +30,12 @@ class AFSingle(object):
                 It's expecting the keys: 'date', 'noop', 'map_file'
                 and won't do anything about the other keys
         """
+        self.timer = None
         self.log_dict = get_log_conf(service, file_format)
 
         self.deltas = []
+        self.current_record = None
+        self.previous_record = None
         self.host = host
         self.file_format = file_format
         self.service = service
@@ -77,7 +80,10 @@ class AFSingle(object):
             self.logger.debug('Get file list from server for instance: %s',
                               self)
             self.get_file_list(self.date)
-            self.current_record = self.iter_item.next()
+            try:
+                self.current_record = self.iter_item.next()
+            except StopIteration:
+                self.current_record = self.previous_record
 
     @property
     def target_file_fp(self):
@@ -223,6 +229,8 @@ class AFSingle(object):
 
     def step(self):
         """ Process the single instance """
+        if self.timer is not None and self.timer > datetime.datetime.now():
+            return
         recent_truncations = []
         try:
             # Get a list of files for this date from the server
@@ -234,8 +242,6 @@ class AFSingle(object):
                                     'for source file: %s', self.filename)
                 self.next_item()
                 return
-
-            # Reset variable for each file that's encountered
 
             # Prepare the file or skip it altogether!
             if(self.filename != os.path.basename(self.target_path)
@@ -261,7 +267,6 @@ class AFSingle(object):
                 self.logger.info('Target File: %s has same size as '
                                  'Source File: %s', self.target_path,
                                  self.filename)
-                self.next_item()
 
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
@@ -292,14 +297,19 @@ class AFSingle(object):
 
                 # Unsuccessful update - mark as a failure and sleep
                 delta_failures += 1
-                self.logger.debug('Delta failed %d time(s) '
-                                  '- About to sleep for %d ms',
-                                  delta_failures,
-                                  configuration.INTER_DELTA_SLEEP_TIME)
-                time.sleep(configuration.INTER_DELTA_SLEEP_TIME / 1000.0)
+                sleep_time = configuration.INTER_DELTA_SLEEP_TIME
                 records = self.get_file_list(self.date)
                 self.records.extend([e for e in records if e not in
                                      self.records])
+            if delta_failures > configuration.DELTA_RETRIES:
+                self.timer = (datetime.datetime.now()
+                              + datetime.timedelta(
+                                  seconds=(sleep_time / 1000.0)
+                              ))
+                self.logger.debug('Delta failed %d time(s) '
+                                  '- About to sleep for %d ms',
+                                  delta_failures,
+                                  sleep_time)
 
             # (at least once an hour - more if errors)
             self.logger.info('Delta retries: %d exceeded',
@@ -313,6 +323,12 @@ class AFSingle(object):
             raise
 
         self.next_item()
+        if self.current_record == self.previous_record:
+            self.logger.info('No more updates for date: '
+                             '%s - Exiting', self.date)
+            if self.date is not None:
+                return False
+            time.sleep(configuration.NP_SLEEP_TIME)
 
     def __str__(self):
         return ('<AFSingle: Host: %s, Service: %s, Format: %s>'
