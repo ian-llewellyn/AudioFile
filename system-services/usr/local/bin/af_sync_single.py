@@ -71,7 +71,13 @@ class AFSingle(object):
         return self.records.__iter__()
 
     def next_item(self):
-        self.current_record = self.iter_item.next()
+        try:
+            self.current_record = self.iter_item.next()
+        except StopIteration:
+            self.logger.debug('Get file list from server for instance: %s',
+                              self)
+            self.get_file_list(self.date)
+            self.current_record = self.iter_item.next()
 
     @property
     def target_file_fp(self):
