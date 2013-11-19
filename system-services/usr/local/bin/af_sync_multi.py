@@ -12,6 +12,7 @@ import sys
 import logging
 import socket
 import os
+import time
 import thread
 import datetime
 
@@ -191,17 +192,40 @@ class AFMulti(object):
         self.logger.debug('AF Sync Multi Instance running')
 
         self.configure()
+        no_progress_sleep_time = 1000
 
-        while(self.list_instances is not None
-              and self.list_instances != [None] * len(self.list_instances)):
-            for i, instance in enumerate(self.list_instances):
+        while True:
+            for instance in self.list_instances:
                 self.target_file = instance.target_path
-                if instance.step() is False:
-                    self.list_instances = None
+                try:
+                    instance.step()
+                except StopIteration:
+                    self.logger.debug(
+                        'Get file list from server for instance: %s',
+                        instance
+                    )
+                    instance.get_file_list(instance.date)
             # If no progress is made, we don't want the script
             # going to 100% CPU. Back off..
+            if(no_progress_sleep_time >
+               g_config.NP_SLEEP_TIME):
+                no_progress_sleep_time = g_config.NP_SLEEP_TIME
+                self.logger.warning('no_progress_sleep_time hit max. '
+                                    'About to sleep for %d ms',
+                                    no_progress_sleep_time)
+            else:
+                self.logger.info('No progress - About to sleep for %d seconds',
+                                 no_progress_sleep_time/1000)
+
+                time.sleep(no_progress_sleep_time / 1000)
+                no_progress_sleep_time = (no_progress_sleep_time * 2
+                                          + 1000)
             # We end the process when a date has been passed in and we have
             # downloaded all the files
+            if self.date is not None:
+                self.logger.info('No more updates for date: '
+                                 '%s - Exiting', self.date)
+                return True
 
     def configure(self):
         self.list_instances = []
