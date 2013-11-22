@@ -14,6 +14,8 @@ import socket
 import os
 import thread
 import datetime
+from datetime import timedelta
+import time
 
 # local modules
 sys.path.append('/etc/af-sync.d/')
@@ -194,10 +196,21 @@ class AFMulti(object):
 
         while(self.list_instances is not None
               and self.list_instances != [None] * len(self.list_instances)):
+
+            self.timer = datetime.datetime.now()
+
             for i, instance in enumerate(self.list_instances):
                 self.target_file = instance.target_path
                 if instance.step() is False:
                     self.list_instances = None
+
+            if((self.timer
+               + timedelta(seconds=g_config.MULTI_LOOP_MINIMUM_TIME/1000))
+               > datetime.datetime.now()):
+                self.logger.info('Went through the loop too quickly. '
+                                 'About to sleep for %s seconds',
+                                 g_config.MULTI_LOOP_MINIMUM_TIME / 1000.)
+                time.sleep(g_config.MULTI_LOOP_MINIMUM_TIME / 1000.)
             # If no progress is made, we don't want the script
             # going to 100% CPU. Back off..
             # We end the process when a date has been passed in and we have

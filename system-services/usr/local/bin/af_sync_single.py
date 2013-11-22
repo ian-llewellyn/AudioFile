@@ -230,6 +230,8 @@ class AFSingle(object):
     def step(self):
         """ Process the single instance """
         if self.timer is not None and self.timer > datetime.datetime.now():
+            self.logger.warning('Backing off, no updates available '
+                                'for instance %s', self.__str__())
             return
         recent_truncations = []
         try:
@@ -328,7 +330,6 @@ class AFSingle(object):
                              '%s - Exiting', self.date)
             if self.date is not None:
                 return False
-            time.sleep(configuration.NP_SLEEP_TIME)
 
     def __str__(self):
         return ('<AFSingle: Host: %s, Service: %s, Format: %s>'
