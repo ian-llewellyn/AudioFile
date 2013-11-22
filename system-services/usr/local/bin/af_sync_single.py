@@ -58,6 +58,7 @@ class AFSingle(object):
 
         self.iter_item = self.iter()
         self.next_item()
+        self.delta_failures = 0
         if logger is None:
             handler = create_handler(
                 name=name,
@@ -77,17 +78,22 @@ class AFSingle(object):
         try:
             self.current_record = self.iter_item.next()
         except StopIteration:
-            print 'getting file list'
             self.logger.debug('Get file list from server for instance: %s',
                               self)
-            records = self.get_file_list(self.date)
-            self.records.extend([e for e in records if e not in
-                                 self.records])
+            if(self.delta_failures > configuration.DELTA_RETRIES
+               and self.date is None):
+                records = self.get_file_list(self.date)
+                self.records.extend([e for e in records if e not in
+                                     self.records])
             try:
                 self.previous_record = self.current_record
                 self.current_record = self.iter_item.next()
             except StopIteration:
-                self.current_record = self.previous_record
+                if self.date is None:
+                    self.iter_item = self.iter()
+                    self.current_record = self.iter_item.next()
+        else:
+            self.delta_failures = 0
 
     @property
     def target_file_fp(self):
@@ -296,22 +302,20 @@ class AFSingle(object):
                               'file_name': self.filename})
             # The Delta object is the object that will
             # actually download the data
-            delta_failures = 0
-            while delta_failures <= configuration.DELTA_RETRIES:
-                self.fetch_delta(req_uri, self.target_file_fp)
-                    # Successful update - reset failure count and sleep
-
-                # Unsuccessful update - mark as a failure and sleep
-                delta_failures += 1
+            has_succeeded = self.fetch_delta(req_uri, self.target_file_fp)
+            if has_succeeded:
+                self.delta_failures = 0
+            else:
+                self.delta_failures += 1
+            if self.delta_failures > configuration.DELTA_RETRIES:
                 sleep_time = configuration.INTER_DELTA_SLEEP_TIME
-            if delta_failures > configuration.DELTA_RETRIES:
                 self.timer = (datetime.datetime.now()
                               + datetime.timedelta(
                                   seconds=(sleep_time / 1000.0)
                               ))
                 self.logger.debug('Delta failed %d time(s) '
                                   '- About to sleep for %d ms',
-                                  delta_failures,
+                                  self.delta_failures,
                                   sleep_time)
 
             # (at least once an hour - more if errors)
@@ -325,12 +329,16 @@ class AFSingle(object):
             self.logger.exception('Caught unhandled exception')
             raise
 
-        self.next_item()
-        if self.current_record == self.previous_record:
-            self.logger.info('No more updates for date: '
-                             '%s - Exiting', self.date)
-            if self.date is not None:
+        if self.delta_failures > configuration.DELTA_RETRIES:
+            self.next_item()
+            if self.current_record == self.previous_record:
+                self.logger.info('No more updates for date: '
+                                 '%s - Exiting', self.date)
+                if self.date is None:
+                    return True
                 return False
+            else:
+                return True
 
     def __str__(self):
         return ('<AFSingle: Host: %s, Service: %s, Format: %s>'
