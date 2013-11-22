@@ -77,10 +77,14 @@ class AFSingle(object):
         try:
             self.current_record = self.iter_item.next()
         except StopIteration:
+            print 'getting file list'
             self.logger.debug('Get file list from server for instance: %s',
                               self)
-            self.get_file_list(self.date)
+            records = self.get_file_list(self.date)
+            self.records.extend([e for e in records if e not in
+                                 self.records])
             try:
+                self.previous_record = self.current_record
                 self.current_record = self.iter_item.next()
             except StopIteration:
                 self.current_record = self.previous_record
@@ -300,9 +304,6 @@ class AFSingle(object):
                 # Unsuccessful update - mark as a failure and sleep
                 delta_failures += 1
                 sleep_time = configuration.INTER_DELTA_SLEEP_TIME
-                records = self.get_file_list(self.date)
-                self.records.extend([e for e in records if e not in
-                                     self.records])
             if delta_failures > configuration.DELTA_RETRIES:
                 self.timer = (datetime.datetime.now()
                               + datetime.timedelta(
