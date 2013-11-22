@@ -5,7 +5,7 @@
 ## Import Modules
 import urllib2
 import time
-import datetime
+from datetime import datetime, timedelta
 import os
 import sys
 import optparse
@@ -14,7 +14,7 @@ import logging.handlers
 import simplejson
 
 sys.path.append('/etc/af-sync.d')
-import configuration
+import configuration as conf
 
 
 class AFSingle(object):
@@ -76,22 +76,20 @@ class AFSingle(object):
 
     def next_item(self):
         try:
+            self.previous_record = self.current_record
             self.current_record = self.iter_item.next()
         except StopIteration:
             self.logger.debug('Get file list from server for instance: %s',
                               self)
-            if(self.delta_failures > configuration.DELTA_RETRIES
+            if(self.delta_failures > conf.DELTA_RETRIES
                and self.date is None):
                 records = self.get_file_list(self.date)
                 self.records.extend([e for e in records if e not in
                                      self.records])
-            try:
-                self.previous_record = self.current_record
-                self.current_record = self.iter_item.next()
-            except StopIteration:
-                if self.date is None:
-                    self.iter_item = self.iter()
-                    self.current_record = self.iter_item.next()
+            if self.date is None:
+                self.iter_item = self.iter()
+                index = self.records.index(self.current_record)
+                self.current_record = self.records[index]
         else:
             self.delta_failures = 0
 
@@ -135,7 +133,7 @@ class AFSingle(object):
         # the latest files
         date = self.date
         if date is None:
-            date = str(datetime.datetime.utcnow().date())
+            date = str(datetime.utcnow().date())
         url = ('http://%s/webservice/v2/listfiles.php'
                '?format=%s&service=%s&date=%s'
                % (self.host, self.file_format, self.service, date))
@@ -229,7 +227,7 @@ class AFSingle(object):
         # Write the update and flush to disk
         chunk = True
         while chunk:
-            chunk = http_resp.read(configuration.CHUNK_SIZE)
+            chunk = http_resp.read(conf.CHUNK_SIZE)
             target_file.write(chunk)
             target_file.flush()
 
@@ -239,7 +237,7 @@ class AFSingle(object):
 
     def step(self):
         """ Process the single instance """
-        if self.timer is not None and self.timer > datetime.datetime.now():
+        if self.timer is not None and self.timer > datetime.now():
             self.logger.warning('Backing off, no updates available '
                                 'for instance %s', self.__str__())
             return
@@ -312,12 +310,10 @@ class AFSingle(object):
                 self.delta_failures = 0
             else:
                 self.delta_failures += 1
-            if self.delta_failures > configuration.DELTA_RETRIES:
-                sleep_time = configuration.INTER_DELTA_SLEEP_TIME
-                self.timer = (datetime.datetime.now()
-                              + datetime.timedelta(
-                                  seconds=(sleep_time / 1000.0)
-                              ))
+            if self.delta_failures > conf.DELTA_RETRIES:
+                sleep_time = conf.INTER_DELTA_SLEEP_TIME
+                self.timer = (datetime.now()
+                              + timedelta(seconds=(sleep_time / 1000.0)))
                 self.logger.debug('Delta failed %d time(s) '
                                   '- About to sleep for %d ms',
                                   self.delta_failures,
@@ -325,7 +321,7 @@ class AFSingle(object):
 
             # (at least once an hour - more if errors)
             self.logger.info('Delta retries: %d exceeded',
-                             configuration.DELTA_RETRIES)
+                             conf.DELTA_RETRIES)
             # Here we close the file
             if self.target_file_fp is not None:
                 self.target_file_fp.close()
@@ -334,12 +330,14 @@ class AFSingle(object):
             self.logger.exception('Caught unhandled exception')
             raise
 
-        if self.delta_failures > configuration.DELTA_RETRIES:
+        if self.delta_failures > conf.DELTA_RETRIES:
             self.next_item()
             if self.current_record == self.previous_record:
                 self.logger.info('No more updates for date: '
                                  '%s - Exiting', self.date)
                 if self.date is None:
+                    self.timer = (datetime.now()
+                                  + timedelta(seconds=conf.NP_SLEEP_TIME))
                     return True
                 return False
             else:
@@ -364,7 +362,7 @@ def file_map(date, map_file, src_file, file_format, service):
     """
     if not map_file:
         return os.path.sep.join(
-            [configuration.AUDIOFILE_DAY_CACHE_STORAGE, file_format,
+            [conf.AUDIOFILE_DAY_CACHE_STORAGE, file_format,
              service, date, src_file]
         )
     else:
@@ -468,9 +466,9 @@ def start_single():
     # Bail out early if the target directory doesn't exist.
     # Only happens if a map file is not being used.
     if(not args.map_file
-       and not os.path.exists(configuration.AUDIOFILE_DAY_CACHE_STORAGE)):
+       and not os.path.exists(conf.AUDIOFILE_DAY_CACHE_STORAGE)):
         logging.critical('AUDIOFILE_DAY_CACHE_STORAGE: %s does not exist',
-                         configuration.AUDIOFILE_DAY_CACHE_STORAGE)
+                         conf.AUDIOFILE_DAY_CACHE_STORAGE)
         sys.exit(os.EX_OSFILE)
 
     #NO_OP = args.noop
@@ -485,7 +483,7 @@ def start_single():
         options['noop'] = args.noop
     if args.date:
         try:
-            datetime.datetime.strptime(args.date, '%Y-%m-%d')
+            datetime.strptime(args.date, '%Y-%m-%d')
         except ValueError:
             raise SyntaxError('date should respect this format: YYYY-MM-DD')
         options['date'] = args.date
@@ -508,21 +506,21 @@ def get_log_conf(service=None, file_format=None, name=None):
 
     log_dict = {
         'LOGFILE': {
-            'log_level': configuration.LOGFILE_LOG_LEVEL,
-            'log_file': configuration.LOG_FILE % parameters,
+            'log_level': conf.LOGFILE_LOG_LEVEL,
+            'log_file': conf.LOG_FILE % parameters,
         },
         'LOGFILE DEBUG': {
-            'log_level': configuration.LOGFILE_DEBUG_LOG_LEVEL,
-            'log_file': configuration.DEBUG_LOG_FILE % parameters,
+            'log_level': conf.LOGFILE_DEBUG_LOG_LEVEL,
+            'log_file': conf.DEBUG_LOG_FILE % parameters,
         },
         'STDERR': {
-            'log_level': configuration.STDERR_LOG_LEVEL,
+            'log_level': conf.STDERR_LOG_LEVEL,
         },
         'EMAIL': {
-            'log_level': configuration.EMAIL_LOG_LEVEL,
+            'log_level': conf.EMAIL_LOG_LEVEL,
         },
         'GENERAL': {
-            'log_format': configuration.LOG_FORMAT
+            'log_format': conf.LOG_FORMAT
         }
     }
     return log_dict
