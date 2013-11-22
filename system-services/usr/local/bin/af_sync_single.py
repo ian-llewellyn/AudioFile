@@ -280,6 +280,11 @@ class AFSingle(object):
                                  'Source File: %s', self.target_path,
                                  self.filename)
 
+                self.next_item()
+                if self.date is None:
+                    return True
+                return False
+
             # Work is to be done on this file
             # (only if tgt_file size == 0) ?
             self.logger.info('Target File: %s started', self.target_path)
