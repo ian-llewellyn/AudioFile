@@ -11,7 +11,7 @@ DEBUG_LOG_FILE = '/var/log/audiofile/af-sync-%s_debug.log'
 
 # Logging
 #ADMIN_EMAILS = ['Ian.Llewellyn@rte.ie', 'radiomnt@rte.ie']
-ADMIN_EMAILS = ['francois.ribemont@gmail.com']
+ADMIN_EMAILS = ['ribemont.francois@gmail.com']
 STDERR_LOG_LEVEL = logging.DEBUG
 LOGFILE_LOG_LEVEL = logging.INFO
 LOGFILE_DEBUG_LOG_LEVEL = logging.DEBUG
@@ -32,3 +32,4 @@ CONFIG_PATH = '/etc/af-sync.d/af-sync.conf'
 LOG_LEVEL = 2
 VERB_LEVEL = 1
 NP_SLEEP_TIME = 20000
+MULTI_LOOP_MINIMUM_TIME = 2000  # in milliseconds
