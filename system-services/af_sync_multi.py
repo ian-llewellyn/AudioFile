@@ -93,7 +93,7 @@ if __name__ == '__main__':
     # infinite loop
     while 1:
         next_run_time = datetime.datetime.now() + datetine.timedelta(
-            milliseconds=configuration.MULTI_LOOP_MIN_TIME)
+            milliseconds=configuration.MAIN_LOOP_MIN_TIME)
 
         for instance in multi:
             instance.step()
