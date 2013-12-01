@@ -87,6 +87,8 @@ class AFSingle(set):
         # Optional arguments
         if not hasattr(self, 'date'):
             self.date = None
+        elif self.date != None:
+            self.date = datetime.datetime.strptime(self.date, '%Y-%m-%d')
         if not hasattr(self, 'map_file'):
             self.map_file = None
         if hasattr(self, 'params'):
@@ -113,7 +115,7 @@ class AFSingle(set):
             self.service, self.format]))
         self.logger.handlers.append(logging.StreamHandler())
         self.logger.level = logging.DEBUG
-        self.logger.info('Initialised', self.service, self.format)
+        self.logger.info('Initialised %s %s' % (self.service, self.format))
         self.logger.debug('Host: %s, Date: %s, Map File: %s' % (self.host,
             self.date, self.map_file))
 
@@ -205,7 +207,7 @@ class AFSingle(set):
         """
         if self._target_fp:
             # Close the existing file if it's open
-            self.target_fp.close()
+            self._target_fp.close()
 
         try:
             # Get the next record
@@ -215,15 +217,24 @@ class AFSingle(set):
             # Get the file list
             for record in self.get_file_list():
                 self.add(Record(record))
-            # Intersect with old records to pick up where we left off
-            self.difference_update(self._old_records)
+
+            if self.issuperset(self._old_records):
+                # Intersect with old records to pick up where we left off
+                self.difference_update(self._old_records)
+            else:
+                # Clear out old records list
+                self._old_records.clear()
+
             # If no files were received, we failed
             if len(self) == 0:
                 return False
+
             # Set up the iterator
-            self.records_iter = self.__iter__()
+            self.records_iter = sorted(self, key=lambda record: record['file']).__iter__()
             # Get the first record
             current_record = self.records_iter.next()
+
+        self.logger.debug('got next record: %s' % current_record)
 
         # This stops us going over the same files again
         self._old_records.add(current_record)
@@ -242,6 +253,8 @@ class AFSingle(set):
 
         self.logger.info('Opening file: %s in append mode' % self._target_file)
         self._target_fp = open(self._target_file, 'ab')
+
+        self._delta_failures = 0
 
         return True
 
@@ -311,7 +324,7 @@ class AFSingle(set):
             # a partial HTTP response
             self.logger.info('Delta failure %d: Partial response not received: '
                         'Offset: %d HTTP_STATUS_CODE: %d data_length: %d' % \
-                        (delta_failures + 1, offset, resp_code, data_length))
+                        (self._delta_failures + 1, offset, resp_code, data_length))
             return False
 
         # Condition 2
@@ -319,14 +332,14 @@ class AFSingle(set):
             # We received no data at all
             self.logger.info('Delta failure %d: No data received: '
                         'Offset: %d HTTP_STATUS_CODE: %d data_length: %d' % \
-                        (delta_failures + 1, offset, resp_code, data_length))
+                        (self._delta_failures + 1, offset, resp_code, data_length))
             return False
 
         # The method was called with no operation mode
         if no_op:
             self.logger.info('Dry run %d: Offset: %d '
                         'HTTP_STATUS_CODE: %d data_length: %d' % \
-                        (delta_failures + 1, offset, resp_code, data_length))
+                        (self._delta_failures + 1, offset, resp_code, data_length))
             return False
 
         # Write the update and flush to disk
@@ -378,7 +391,7 @@ class AFSingle(set):
             # on to the next file.
             return False
 
-        if self.date != None and not self.next_file():
+        if not self.next_file() and self.date != None:
             # Failed to get another file and a date was passed into the program
             return None
 
