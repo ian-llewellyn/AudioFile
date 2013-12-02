@@ -6,19 +6,15 @@ import datetime, time
 
 instances = []
 
-host = '192.168.50.154'
-for service in ['test1', 'test2', 'test3', 'test4']:
-    for format in ['mp2', 'mp3']:
-        instances.append(
-            AFSingle(host=host, service=service, format=format)
-        )
-
-host = '192.168.50.155'
-for service in ['test5', 'test6', 'test7', 'test8']:
-    for format in ['mp2', 'mp3']:
-        instances.append(
-            AFSingle(host=host, service=service, format=format)
-        )
+instances.append(
+    AFSingle(host='192.168.50.155', service='test5', format='mp3')
+    )
+instances.append(
+    AFSingle(host='192.168.50.154', service='test4', format='mp3')
+    )
+instances.append(
+    AFSingle(host='192.168.50.155', service='test5', format='mp2')
+    )
 
 while True:
     next_run_time = datetime.datetime.now() + datetime.timedelta(
@@ -29,5 +25,5 @@ while True:
 
     now = datetime.datetime.now()
     if now < next_run_time:
-        print 'Sleeping for %f seconds' % (next_run_time - now).seconds
-        time.sleep((next_run_time - now).seconds)
+        print 'Sleeping for %f seconds' % (next_run_time - now).total_seconds()
+        time.sleep((next_run_time - now).total_seconds())
