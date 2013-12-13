@@ -1,0 +1,195 @@
+body {
+/*  padding-top: 20px;*/
+  padding-bottom: 20px;
+}
+
+/* Everything but the jumbotron gets side spacing for mobile first views */
+.header,
+.marketing,
+.footer {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+/* Customize container */
+@media (min-width: 768px) {
+  .container {
+    max-width: 730px;
+  }
+
+/* Responsive: Portrait tablets and up */
+@media screen and (min-width: 768px) {
+  /* Remove the padding we set earlier */
+  .header,
+  .marketing,
+  .footer {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+
+/* UNIVERSAL
+-------------------------------------------------- */
+#header #logo {
+float: left;
+margin: auto 0;
+margin-right: 20px;
+overflow: hidden;
+letter-spacing: -1px;
+float:left;
+}
+
+#header #logo img {
+display: inline-block;
+max-width: 80px;
+max-height: 30px;
+}
+
+#header #logo a {
+display: inline-block;
+font-size: 38px;
+line-height: 1em;
+color: #555;
+}
+
+.navbar-brand {
+  font-size:28px;
+}
+
+.centre {
+  text-align: center;
+}
+
+.centre h1 {
+  text-align: center;
+  margin-bottom:0;
+  margin-top:0;
+}
+
+h1.time {
+  font-size:48px;
+  color:white;
+
+}
+
+.right {
+  text-align: right;
+}
+
+.progress {
+    background-color: #393939;
+}
+
+#jp_container_1 {
+  margin-top:20px;
+}
+
+/* CONTROLLER
+-------------------------------------------------- */
+.inner-well {
+    /*background: none repeat scroll 0 0 #3A3A41;*/
+    border: 1px solid #2B2B2F;
+    border-radius: 5px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+    padding: 8px;
+}
+.inner-well + .inner-well {
+    margin-top: 10px;
+}
+
+.controls .btn-icon {
+font-size: 16px;
+line-height: 17px;
+}
+
+.controls .btn {
+  min-width:65px;
+}
+
+.controls .btn span.icon {
+  vertical-align: bottom;
+}
+
+.btn-outline {
+  border-radius:18px;
+  padding:3px;
+  width:100%;
+    border: 1px solid #2B2B2F;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.mark button {width:212px;}
+
+
+/* COLLAPSE
+-------------------------------------------------- */
+.collapse.width {
+    height: auto;
+    -webkit-transition: width 0.35s ease;
+    -moz-transition: width 0.35s ease;
+    -o-transition: width 0.35s ease;
+    transition: width 0.35s ease;
+
+/*    width:0;*/
+}
+
+
+
+/* CUSTOMIZE THE CAROUSEL
+-------------------------------------------------- */
+
+/* Carousel base class */
+.carousel {
+  height: 120px;
+  /*margin-bottom: 20px;*/
+}
+/* Since positioning the image, we need to help out the caption */
+.carousel-caption {
+  z-index: 10;
+}
+
+/* Declare heights because of positioning of img element */
+.carousel .item {
+  margin-top:10px;
+  height: 120px;
+  /*background-color: #777;*/
+}
+.carousel-inner > .item > img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  min-width: 100%;
+  height: 120px;
+}
+
+/* TIDY BELOW */
+
+.carousel-indicators {
+  bottom: -15px;
+}
+
+#myCarousel ul {
+  margin:0;
+  padding:0;
+  padding-left: 23px;
+}
+
+#myCarousel li
+{
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.carousel-control .glyphicon-chevron-left, .carousel-control .glyphicon-chevron-right {
+  top: 38%;
+}
+
+.carousel-control {
+width: 0%;
+}
+
+.station {
+  width:50px;
+}
