@@ -1,0 +1,110 @@
+UI Work
+=======
+The AudioFile Player is a web based tool that allows a user to listen to and download previously broadcast content from a number of radio stations.
+
+It uses recorded audio files which are served via HTTP from a central server to the client.
+
+The aim of this work is to design an interface for the Player that is modeled on a modern or futuristic (car) radio design, but provides a number of functions (listed below) in a very user friendly way. No non-standard iconography should be used.
+
+Available content can be discovered in a number of ways:
+* By hour - each day wil show a list of 24 hour blocks (today will show the number of hour blocks that have so far been recorded)
+* By metadata - a list of shows (and items or tracks on that show) [NOT IMPLEMENTED]
+* By outage - another list referring to specific times in the files [NOT IMPLEMENTED]
+
+The Player will function like an ordinary radio - when you change the station, the new one begins to play from the same point in time you switched from the old station.
+
+Design elements:
+* Display
+- Date - shows the date at the playhead position
+- Time - shows the real time (not elapsed) at the playhead position - this should be prominent.
+- Station
+- Error output - possibly a modal popup
+
+* Control
+- Play / Pause button
+- Volume Slider
+- Mute Button
+- Skip forward buttons (5 seconds, 30 secs, 5 minutes, 30 mins)
+- Skip backward buttons (5 seconds, 30 secs, 5 minutes, 30 mins)
+- Scrub Bar - to jump anywhere within an hour block
+- Playback Rate Slider
+
+* Clipping
+- Mark Clip Start
+- Clip start timecode input (date + time)
+- Listen to start of Clip
+- Mark Clip End
+- Clip end timecode input (date + time)
+- Listen to end of Clip
+- Play Clip
+- Email Clip (presents 2 options)
+  - as link (intranet only)
+  - as mp3 attachment
+- Download Clip (presents 2 options)
+  - as mp2
+  - as mp3
+
+* Navigation
+- Station
+- Calendar
+- Mode switch - hours, shows or outages
+- List box - displays results of 
+
+N.B. Station is listed under Display and Navigation above, either one is sufficient as long as it's obvious which station is being listened to without clicking anywhere.
+
+The Player will be launched in a popup browser window no wider than 800 pixels and no higher than 600 pixels. The design may expand and contract provided user friendliness is maintained.
+
+
+Programming Work
+================
+The user interface interacts with the audio server using a variety of simple JSON API calls.
+- listservices - lists the available radio stations
+- listfiles - lists the discrete audio files for a station on a given day
+- download - downloads audio from a service in a given format between a given start and end date and time
+- email - sends a clip to a supplied recipient either as an attachment or a link back to the AudioFile Player [NOT IMPLEMENTED]
+
+While the audio server records hour long blocks starting as close to the hour as possible, the player interface should abstract the user from dealing with these discrete audio files instead showing them the dates and times that they are listening to / working with.
+
+The player implementation should be based on the jQuery and jPlayer libraries (http://jplayer.org/) for audio playback (HTML5 audio with Adobe Flash fallback).
+
+The functions that must be programed are as follows:
+
+* Cookies (set and read by JavaScript) will be used to remember
+- the last station the user selected (for initial load on next visit)
+- other Player state (design dependant)
+
+* Query string parameters
+- service - pre-select a station
+- start - (only effective if service is also provided) load time into clip selection start box and begin playback at the specified date and time
+- stop - (only effective if start is also provided) load stop time into the clip selection end box ready for download and stop automatic playback when this time is reached
+
+* Email this clip - interacts with the email API [NOT IMPLEMENTED]
+- ...As link (Intranet Only)
+- ...As mp3 attachment
+
+* Preview - becomes available when start/end timecodes are applied
+- Start - begins playback at the clip selection start timecode for a duration of 5 seconds
+- End - begins playback 5 seconds prior to the clip selection end timecode for a duration of 5 seconds
+
+* Play Clip - (available when both start and end timecodes are set) plays clip from start to end timecode
+
+* Download Clip - interacts with the download API
+- mp2
+- mp3
+
+* Skip
+- Forward 5s, 30s, 5m, 30m
+- Backward 5s, 30s, 5m, 30m
+
+* Static sound effect between station changes
+- used for authenticity
+- to mask the delay between changing stations
+- can be configured off
+
+* Listing Options
+- Hours (Files) - jumps to the time decoded from the filename returned (2012-02-27-12-00-00-02.mp3 for example)
+- Metadata (Programmes (PIA) and Items (Clipper)) [NOT IMPLEMENTED]
+- Outages (Chromatec) [NOT IMPLEMENTED]
+
+* Playback Speed
+- 0.5x - 4.0x
