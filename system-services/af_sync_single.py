@@ -1,23 +1,26 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-    Usage:
-      af-sync-single.py --host <host> --service <service> --format <format> [OPTIONS]
+Usage:
+  af-sync-single.py --host <host> --service <service> --format <format> [--date <date>] [--mapfile <map_file>]
 
-      Options:
-        -h, --host=<host>           The host to be used to source the files.
-        -s, --service=<service>     The AudioFile service name to be synchronised.
-        -f, --format=<format>       Provide the format to sync, mp2 or mp3.
-        -d, --date=<date>           Only process files for given date (Format YYYY-MM-DD).
-        -m, --mapfile=<map_file>    Give the absolute path of a map file to use.
-        -p, --params=<params_file>  Path to a file containing internal parameters.
+  Options:
+    -h, --host=<host>           The host to be used to source the files.
+    -s, --service=<service>     The AudioFile service name to be synchronised.
+    -f, --format=<format>       Provide the format to sync, mp2 or mp3.
+    -d, --date=<date>           Only process files for given date (Format YYYY-MM-DD).
+    -m, --mapfile=<map_file>    Give the absolute path of a map file to use.
+    -p, --params=<params_file>  Path to a file containing AFSingle parameters.
+    -n, --noop                  No file operations, show what would be done.
 """
 __version__ = '0.2'
+
+import logging
 
 # DEFAULTS
 DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
 DEFAULT_LOG_PATH = '/var/log/audiofile'
-DEFAULT_LOG_LEVEL = 'INFO'
+DEFAULT_LOG_LEVEL = logging.DEBUG
 DEFAULT_INTER_DELTA_MIN_TIME = 1250
 DEFAULT_DELTA_RETRIES = 2
 DEFAULT_NO_PROGRESS_MAX_WAIT = 120000
@@ -51,6 +54,24 @@ def utc_file_to_local(file_title):
     # Return
     return (int(dow), hour)
 
+def read_params_from_file(params_file):
+    """ read_params_from_file reads an AudioFile parameters file and 
+        returns a params dict that can be passed straight into an
+        AFSingle instance upon initialisation.
+    """
+    params = {}
+    with open(params_file) as f:
+        for line in f.readlines():
+            # Ignore comments
+            if line.startswith('#'):
+                continue
+            # Ignore blank lines
+            if line.strip() == '':
+                continue
+            # Add the parameter to the params dict
+            eval(compile(line.strip().lower(), '/dev/null', 'single'),
+                 globals(), params)
+    return params
 
 class Record(dict):
     def __hash__(self):
@@ -66,7 +87,7 @@ class AFSingle(set):
     This class is used to hold the parameters and state of a synchronising
     process.
     instance = AFSingle(host=host, service=service, format=format
-        [, date=date][, map_file=map_file][, params=params_dict])
+        [, date=date)[, map_file=map_file][, params=params_dict])
     params_dict = {
         'inter_delta_min_time': int milliseconds,
         'no_progress_max_wait': int milliseconds
@@ -111,11 +132,10 @@ class AFSingle(set):
         if not hasattr(self, 'audio_storage_path'):
                 self.audio_storage_path = DEFAULT_AUDIO_STORAGE_PATH
 
-        import logging
         self.logger = logging.getLogger('.'.join(['af-sync',
             self.service, self.format]))
         self.logger.handlers.append(logging.StreamHandler())
-        self.logger.level = logging.DEBUG
+        self.logger.level = self.log_level
         self.logger.info('Initialised %s %s' % (self.service, self.format))
         self.logger.debug('Host: %s, Date: %s, Map File: %s' % (self.host,
             self.date, self.map_file))
@@ -196,7 +216,7 @@ class AFSingle(set):
         #return record['file'] for record in decoded['files']]
         return decoded['files']
 
-    def next_file(self):
+    def next_file(self, no_op=False):
         """
         This method lines up the next file for processing. This may involve
         calling the get_file_list method.
@@ -208,7 +228,7 @@ class AFSingle(set):
         """
         if self._target_fp:
             # Close the existing file if it's open
-            self._target_fp.close()
+            no_op or self._target_fp.close()
 
         try:
             # Get the next record
@@ -250,10 +270,13 @@ class AFSingle(set):
             # Create the directory - date_dir most likely
             self.logger.info('Creating directory: %s' % \
                         os.path.dirname(self._target_file))
-            os.mkdir(os.path.dirname(self._target_file), 0755)
+            no_op or os.mkdir(os.path.dirname(self._target_file), 0755)
 
         self.logger.info('Opening file: %s in append mode' % self._target_file)
-        self._target_fp = open(self._target_file, 'ab')
+        if not no_op:
+            self._target_fp = open(self._target_file, 'ab')
+        else:
+            self._target_fp = None
 
         self._delta_failures = 0
 
@@ -401,24 +424,15 @@ class AFSingle(set):
             seconds=self._no_progress_sleep_time)
         return False
 
-def load_params():
-    params = {}
-    try:
-        with file(args['--params'] or DEFAULT_PARAMS_FILE) as params_file:
-            eval(compile(params_file.read(), '/dev/null', 'exec'),
-                 globals(), params)
-    except IOError:
-        # Params file not found, using built-in defaults.
-        pass
-    return params
-
 if __name__ == '__main__':
     # Parse arguments
     from docopt import docopt
     args = docopt(__doc__, version=__version__)
 
-    # Get the parameters
-    params = load_params()
+    if args['--params']:
+        params = read_params_from_file(args['--params'])
+    else:
+        params = read_params_from_file(DEFAULT_PARAMS_FILE)
 
     # Instantiate class
     single = AFSingle(host=args['--host'], service=args['--service'],
@@ -426,7 +440,7 @@ if __name__ == '__main__':
         map_file=args['--mapfile'], params=params)
 
     # main loop
-    while True:
+    while 1:
         next_run_time = datetime.datetime.now() + datetime.timedelta(
             milliseconds=DEFAULT_MAIN_LOOP_MIN_TIME)
 
