@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <!-- Note there is no responsive meta tag here -->
+
+    <link rel="shortcut icon" href="dist/img/favicon.png">
+
+    <title>RTE Audio Player</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="dist/css/style.css" rel="stylesheet">
+
+    <!-- Custom styles for this template -->
+    <link href="css/bespoke.css" rel="stylesheet">
+    <link href="css/icon-styles.css" rel="stylesheet">
+
+    <script src="dist/js/jquery.js"></script>
+
+<!--<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>-->
+<script type="text/javascript" src="js/jquery.jplayer.min.js"></script>
+<script type="text/javascript">
+//<![CDATA[
+$(document).ready(function(){
+
+	$("#jquery_jplayer_1").jPlayer({
+		ready: function () {
+			$(this).jPlayer("setMedia", {
+				mp3:"http://www.jplayer.org/audio/mp3/TSP-01-Cro_magnon_man.mp3"
+			});
+		},
+		swfPath: "js",
+		supplied: "mp3",
+		wmode: "window",
+		smoothPlayBar: true,
+		keyEnabled: true
+	});
+});
+//]]>
+</script>
+
+    <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+      <script src="dist/js/html5shiv.js"></script>
+    <![endif]-->
+
+</head>
+<body>
+
+	<!-- Fixed navbar -->
+	<div id="header">
+	<div class="navbar navbar-default">
+	  <div class="container">
+	    <div class="navbar-header">
+
+	      <span class="logo" id="logo">
+	        <a class="logo_image" title="RTE Audio Player" href="/"><img alt="RTE Audio" src="dist/img/rte.png"></a>
+	      </span>
+
+	      <a class="navbar-brand" href="index.html#">RTE Audio</a>
+
+	    </div>
+	  </div>
+	</div>
+	</div><!-- /header -->
+
+
+	<div class="container">
+	 	<div class="row">
+		    <div class="col-xs-12">
+
+			<div class="well">
+
+
+				<div class="row">
+					<div class="col-xs-4">
+					  RTE Radio 1<br />
+					  PLAYING
+					  LIVE<br />
+					  MP3<br />
+					  1X<br />
+					  83%<br />
+					</div>
+
+					<div class="col-xs-4 centre">
+					  <h1>08/06/2013</h1>
+					  <h1 class="time">23:41:11</h1>
+					</div>
+
+					<div class="col-xs-4 right">
+					  08/06/2013 - 12:42:20<br />
+					  08/06/2013 - 14:22:11
+					</div>
+				</div><!-- /row -->
+
+				<div class="row controls">
+					<div class="col-xs-12" style="background-color:transparent; margin-top:10px;">
+
+						  <div class="row" style="margin:10px 0px 0px 0px">
+						  	<div class="" style="padding-right:0; width:294px; float:left;">
+				                <div class="btn-group btn-outline" 
+
+				                style="border-radius:18px 0px 0px 18px; border-right:0px">
+
+				                  <button class="btn btn-default btn-sm" type="button">30m</button>
+				                  <button class="btn btn-default btn-sm" type="button">5m</button>
+				                  <button class="btn btn-default btn-sm" type="button">30s</button>
+				                  <button class="btn btn-default btn-sm" type="button">5s</button>
+				                </div>
+						  	</div><!-- /col5 -->
+
+						  	<div class="" style="width:72px; float:left;">
+				                <div class="btn-outline" 
+				                style="border-radius:0px 0px 25px 25px; border-left:0; border-right:0;">
+
+				                  <button 
+				                  style="margin:auto; text-align:centre; border-radius: 20px; font-size:30px; line-height:20px;" class="btn btn-default btn-lg" 
+
+				                  type="button">
+				                  	<span class="icon rte-icon-play-1" style=""></span>
+				                  </button>
+				                </div>
+						  	</div><!-- /col5 -->
+
+						  	<div class="" style="padding-left:0; width:294px; float:left;">
+				                <div class="btn-group btn-outline pull-right" 
+
+				                style="border-radius:0px 18px 18px 0px; border-left:0px; padding-left:30px;">
+
+				                  <button class="btn btn-default btn-sm" type="button">5s</button>
+				                  <button class="btn btn-default btn-sm" type="button">30s</button>
+				                  <button class="btn btn-default btn-sm" type="button">5m</button>
+				                  <button class="btn btn-default btn-sm" type="button">30m</button>
+				                </div>
+						  	</div><!-- /col5 -->
+						  </div>
+
+
+						  <div class="row" style="margin:0px 0px 10px 0px">
+
+						  <div class="pull-left">
+			                <div class="btn-group" style="margin-top:-11px;">
+			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-off-volume-2"></span></button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-down-volume-2"></span></button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-up-volume-2"></span></button>
+			                </div>
+						  </div>
+
+
+						  <div class="pull-right" style="margin-top:-11px;">
+			                <div class="btn-group">
+			                  <button class="btn btn-default btn-sm" type="button">1x</button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-tortoise"></span></button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-hare"></span></button>
+			                </div>
+						  </div>
+
+		            	</div>
+
+
+
+
+						<div class="row mark">
+						  	<div class="col-xs-12">
+
+				                <div class="btn-group">
+				                  <button  class="btn btn-default btn-sm" type="button">Mark Start <span class="icon rte-icon-mark-start-1"></span></button>
+				                  <button class="btn btn-default btn-sm" type="button">Mark End <span class="icon rte-icon-mark-end"></span></button>
+				                </div>
+
+				                <div class="btn-group pull-right">
+				               		<button class="btn btn-default btn-sm" type="button">Download <span class="icon rte-icon-play-1"></span></button>
+				               	</div>
+
+
+						  	</div><!-- /col12 -->
+						  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+						<!--
+						<div id="jquery_jplayer_1" class="jp-jplayer"></div>
+
+						<div id="jp_container_1" class="jp-video">
+							<div class="jp-type-single">
+								<div class="jp-gui jp-interface">
+			
+									<div class="jp-interface">
+										<div class="jp-progress">
+											<div class="jp-seek-bar">
+												<div class="jp-play-bar"></div>
+											</div>
+										</div>
+										<div class="jp-time-holder">
+											<div class="jp-current-time"></div>
+											<div class="jp-duration"></div>
+										</div>
+										<div class="jp-controls-holder">
+											<ul class="jp-controls">
+												<li><a href="javascript:;" class="jp-play" tabindex="1">play</a></li>
+												<li><a href="javascript:;" class="jp-pause" tabindex="1">pause</a></li>
+												<li><a href="javascript:;" class="jp-stop" tabindex="1">stop</a></li>
+												<li><a href="javascript:;" class="jp-mute" tabindex="1" title="mute">mute</a></li>
+												<li><a href="javascript:;" class="jp-unmute" tabindex="1" title="unmute">unmute</a></li>
+												<li><a href="javascript:;" class="jp-volume-max" tabindex="1" title="max volume">max volume</a></li>
+											</ul>
+
+											<div class="jp-volume-bar">
+												<div class="jp-volume-bar-value"></div>
+											</div>
+
+
+											<ul class="jp-toggles">
+												<li><a href="javascript:;" class="jp-repeat" tabindex="1" title="repeat">repeat</a></li>
+												<li><a href="javascript:;" class="jp-repeat-off" tabindex="1" title="repeat off">repeat off</a></li>
+											</ul>
+										</div>
+									</div>
+									<div class="jp-title">
+										<ul>
+											<li>Cro Magnon Man</li>
+										</ul>
+									</div>
+									<div class="jp-no-solution">
+										<span>Update Required</span>
+										To play the media you will need to either update your browser to a recent version or update your <a href="http://get.adobe.com/flashplayer/" target="_blank">Flash plugin</a>.
+									</div>
+								</div>
+							</div>
+						</div>
+					-->
+
+					</div><!-- /.col 12 jplayer -->
+				</div><!-- /.row -->
+
+			</div><!-- /well -->
+			</div><!-- /.col 12 -->
+		</div><!-- /.row -->
+	</div><!-- /.container -->
+
+
+
+	<div class="container">
+      <div class="row">
+        <div class="col-xs-6">
+
+<script type="text/javascript">
+$(document).ready(function(){
+ 
+    activeItem = $("#accordion > li:first");
+    $(activeItem).addClass('active');
+ 
+    $("#accordion > li").hover(function(){
+        $(activeItem).animate({width: "50px"}, {duration:300, queue:false});
+        $(this).animate({width: "220px"}, {duration:300, queue:false});
+        activeItem = this;
+    });
+ 
+});
+</script>
+
+<style>
+#accordion {
+list-style: none;
+margin: 0px 0;
+padding: 0;
+height: 200px;
+overflow: hidden;
+/*background: #7d8d96;*/
+}
+ 
+#accordion > li {
+float: left;
+border-left:0;
+display: block;
+height: 200px;
+width: 50px;
+padding: 15px 0;
+overflow: hidden;
+color: #fff;
+text-decoration: none;
+font-size: 16px;
+line-height: 1.5em;
+border-left: 1px solid #fff;
+}
+ 
+#accordion > li img {
+border: none;
+border-right: 1px solid #fff;
+float: left;
+margin: -15px 15px 0 0;
+}
+ 
+#accordion > li.active {
+width: 220px;
+}
+
+
+
+ul#accordion li ul li {
+
+}
+
+.panel-body {
+	content: over;
+	height: 340px;
+    float: left;
+    overflow: auto;
+    overflow-y: hidden;
+}
+
+
+
+#navlist
+{
+width: 100%;
+padding: 0;
+background-color: #90bade;
+color: #333;
+}
+
+ul#navlist 
+{
+
+list-style: none;
+margin: 0;
+margin-top:-15px;
+margin-right:-15px;
+padding: 0;
+border: none;
+}
+
+#navlist li
+{
+border-bottom: 1px solid #90bade;
+margin: 0;
+}
+
+#navlist li a
+{
+display: block;
+padding: 5px 5px 5px 0.5em;
+background-color: #2175bc;
+color: #fff;
+text-decoration: none;
+width: 100%;
+}
+
+html>body #navlist li a { width: auto; }
+
+#navlist li a:hover
+{
+background-color: #2586d7;
+color: #fff;
+}
+
+</style>
+
+
+			<div class="panel panel-default">
+
+			  <div class="panel-heading">
+			    <h3 class="panel-title">Days</h3>
+			  </div>
+			  <div class="panel-body">
+			    Include calander here
+			  </div>
+			</div>
+        </div>
+        <div class="col-xs-6">
+
+
+			<div class="panel panel-default">
+
+<!-- 			  <div class="panel-heading">
+			    <h3 class="panel-title">Days</h3>
+			  </div> -->
+			  <div class="panel-body" style="margin:0; padding:0">
+
+				<ul id="accordion">
+			      <li>
+			      	<img src="dist/img/section_1.png">
+
+			        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In iaculis volutpat quam, non suscipit arcu accumsan at. Aliquam pellentesque.
+			      </li>
+			      <li>
+			      	<img src="dist/img/section_2.png">
+			        <strong>Section 2 Header</strong><br/>
+			        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In iaculis volutpat quam, non suscipit arcu accumsan at. Aliquam pellentesque.
+			      </li>
+			      <li>
+			      	<img src="dist/img/section_3.png">
+
+
+
+<ul id="navlist">
+<li id="active"><a href="#" id="current">Item one</a></li>
+<li><a href="#">Item two</a></li>
+<li><a href="#">Item three</a></li>
+<li><a href="#">Item four</a></li>
+<li><a href="#">Item five</a></li>
+</ul>
+
+
+
+			      </li>
+			  	</ul>
+
+
+			  </div>
+			</div>
+
+
+
+
+
+
+
+        </div>
+      </div>
+	</div><!-- /.container -->
+
+
+
+
+
+	<div class="container">
+      <div class="row">
+        <div class="col-xs-12">
+
+		    <div id="myCarousel" class="carousel slide" data-ride="carousel">
+		      <!-- Indicators -->
+		      <ol class="carousel-indicators">
+		        <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+		        <li data-target="#myCarousel" data-slide-to="1"></li>
+		        <li data-target="#myCarousel" data-slide-to="2"></li>
+		      </ol>
+		      <div class="carousel-inner">
+		        <div class="item active">
+
+					<ul class="thumbnails slides">
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+					</ul>
+
+		        </div>
+		        <div class="item">
+		          
+					<ul class="thumbnails slides">
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+					</ul>
+
+		        </div>
+		        <div class="item">
+
+					<ul class="thumbnails slides">
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+					</ul>
+
+		        </div>
+		      </div><!-- Carousel inner -->
+
+		      <a class="left carousel-control" href="index.html#myCarousel" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a>
+		      <a class="right carousel-control" href="index.html#myCarousel" data-slide="next"><span class="glyphicon glyphicon-chevron-right"></span></a>
+		    </div><!-- /.carousel -->
+
+        </div><!-- /col-xs-12 -->
+      </div><!-- /row -->
+	</div><!-- /container - carousel -->
+
+    <!-- Bootstrap core JavaScript
+    ================================================== -->
+
+    <!-- Placed at the end of the document so the pages load faster -->
+
+    <script src="dist/js/bootstrap.min.js"></script>
+    <script src="dist/js/holder.js"></script>
+
+	<script type="text/javascript">
+	    $(document).ready(function() {   
+
+			$('.carousel').carousel(
+			{
+			pause: true,
+			interval: false
+			});
+
+	});
+	</script>
+
+</body>
+</html>
