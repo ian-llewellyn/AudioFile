@@ -2,14 +2,15 @@
 # -*- coding: utf-8 -*-
 """
     Usage:
-      af-sync-single.py --host <host> --service <service> --format <format> [--date <date>] [--mapfile <map_file>]
+      af-sync-single.py --host <host> --service <service> --format <format> [OPTIONS]
 
       Options:
-        -h, --host=<host>          The host to be used to source the files.
-        -s, --service=<service>    The AudioFile service name to be synchronised.
-        -f, --format=<format>      Provide the format to sync, mp2 or mp3.
-        -d, --date=<date>          Only process files for given date (Format YYYY-MM-DD).
-        -m, --mapfile=<map_file>  Give the absolute path of a map file to use.
+        -h, --host=<host>           The host to be used to source the files.
+        -s, --service=<service>     The AudioFile service name to be synchronised.
+        -f, --format=<format>       Provide the format to sync, mp2 or mp3.
+        -d, --date=<date>           Only process files for given date (Format YYYY-MM-DD).
+        -m, --mapfile=<map_file>    Give the absolute path of a map file to use.
+        -p, --params=<params_file>  Path to a file containing internal parameters.
 """
 __version__ = '0.2'
 
@@ -65,7 +66,7 @@ class AFSingle(set):
     This class is used to hold the parameters and state of a synchronising
     process.
     instance = AFSingle(host=host, service=service, format=format
-        [, date=date)[, map_file=map_file][, params=params_dict])
+        [, date=date][, map_file=map_file][, params=params_dict])
     params_dict = {
         'inter_delta_min_time': int milliseconds,
         'no_progress_max_wait': int milliseconds
@@ -400,18 +401,32 @@ class AFSingle(set):
             seconds=self._no_progress_sleep_time)
         return False
 
+def load_params():
+    params = {}
+    try:
+        with file(args['--params'] or DEFAULT_PARAMS_FILE) as params_file:
+            eval(compile(params_file.read(), '/dev/null', 'exec'),
+                 globals(), params)
+    except IOError:
+        # Params file not found, using built-in defaults.
+        pass
+    return params
+
 if __name__ == '__main__':
     # Parse arguments
     from docopt import docopt
     args = docopt(__doc__, version=__version__)
 
+    # Get the parameters
+    params = load_params()
+
     # Instantiate class
     single = AFSingle(host=args['--host'], service=args['--service'],
         format=args['--format'], date=args['--date'],
-        map_file=args['--mapfile'])
+        map_file=args['--mapfile'], params=params)
 
     # main loop
-    while 1:
+    while True:
         next_run_time = datetime.datetime.now() + datetime.timedelta(
             milliseconds=DEFAULT_MAIN_LOOP_MIN_TIME)
 
