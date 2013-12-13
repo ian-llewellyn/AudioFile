@@ -262,12 +262,110 @@ $(document).ready(function(){
  
     $("#accordion > li").hover(function(){
         $(activeItem).animate({width: "50px"}, {duration:300, queue:false});
-        $(this).animate({width: "210px"}, {duration:300, queue:false});
+        $(this).animate({width: "220px"}, {duration:300, queue:false});
         activeItem = this;
     });
  
 });
 </script>
+
+<style>
+#accordion {
+list-style: none;
+margin: 0px 0;
+padding: 0;
+height: 200px;
+overflow: hidden;
+/*background: #7d8d96;*/
+}
+ 
+#accordion > li {
+float: left;
+border-left:0;
+display: block;
+height: 200px;
+width: 50px;
+padding: 15px 0;
+overflow: hidden;
+color: #fff;
+text-decoration: none;
+font-size: 16px;
+line-height: 1.5em;
+border-left: 1px solid #fff;
+}
+ 
+#accordion > li img {
+border: none;
+border-right: 1px solid #fff;
+float: left;
+margin: -15px 15px 0 0;
+}
+ 
+#accordion > li.active {
+width: 220px;
+}
+
+
+
+ul#accordion li ul li {
+
+}
+
+.panel-body {
+	content: over;
+	height: 340px;
+    float: left;
+    overflow: auto;
+    overflow-y: hidden;
+}
+
+
+
+#navlist
+{
+width: 100%;
+padding: 0;
+background-color: #90bade;
+color: #333;
+}
+
+ul#navlist 
+{
+
+list-style: none;
+margin: 0;
+margin-top:-15px;
+margin-right:-15px;
+padding: 0;
+border: none;
+}
+
+#navlist li
+{
+border-bottom: 1px solid #90bade;
+margin: 0;
+}
+
+#navlist li a
+{
+display: block;
+padding: 5px 5px 5px 0.5em;
+background-color: #2175bc;
+color: #fff;
+text-decoration: none;
+width: 100%;
+}
+
+html>body #navlist li a { width: auto; }
+
+#navlist li a:hover
+{
+background-color: #2586d7;
+color: #fff;
+}
+
+</style>
+
 
 			<div class="panel panel-default">
 
@@ -290,32 +388,31 @@ $(document).ready(function(){
 			  <div class="panel-body" style="margin:0; padding:0">
 
 				<ul id="accordion">
-			      <li  id="items">
+			      <li>
 			      	<img src="dist/img/section_1.png">
-			        <!--<strong>Hours</strong><br/>-->
 
-					<ul class="navlist" class="">
-					<li id="active"><a href="#" id="current">00:00</a></li>
-					<li><a href="#">01:00</a></li>
-					<li><a href="#">02:00</a></li>
-					<li><a href="#">03:00</a></li>
-					<li><a href="#">04:00</a></li>
-					<li><a href="#">01:00</a></li>
-					<li><a href="#">02:00</a></li>
-					<li><a href="#">03:00</a></li>
-					<li><a href="#">04:00</a></li>
-					</ul>
-
+			        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In iaculis volutpat quam, non suscipit arcu accumsan at. Aliquam pellentesque.
 			      </li>
-			      <li id="programs">
+			      <li>
 			      	<img src="dist/img/section_2.png">
-			        <strong>Programs</strong><br/>
+			        <strong>Section 2 Header</strong><br/>
 			        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In iaculis volutpat quam, non suscipit arcu accumsan at. Aliquam pellentesque.
 			      </li>
-			      <li id="items">
+			      <li>
 			      	<img src="dist/img/section_3.png">
-			        <strong>Items</strong><br/>
-			        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In iaculis volutpat quam, non suscipit arcu accumsan at. Aliquam pellentesque.
+
+
+
+<ul id="navlist">
+<li id="active"><a href="#" id="current">Item one</a></li>
+<li><a href="#">Item two</a></li>
+<li><a href="#">Item three</a></li>
+<li><a href="#">Item four</a></li>
+<li><a href="#">Item five</a></li>
+</ul>
+
+
+
 			      </li>
 			  	</ul>
 
