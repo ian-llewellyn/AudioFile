@@ -94,11 +94,13 @@ class AFMulti(set):
     The AFMulti class is a simple set used as a manager for the single
     instances it contains.
     """
-    def __init__(self, multi_config, params={}):
+    def __init__(self, multi_config, params=None):
         """
         Standard constructor method.
         """
         super(AFMulti, self).__init__()
+        if params is None:
+            params = {}
         for single_config in multi_config:
             single_instance = AFSingle(params=params, **single_config)
             self.add(single_instance)
@@ -134,12 +136,14 @@ class AFMultiServer(object):
     The AFMultiServer class will be started along with and instance
     of the AFMulti class. It listens on a TCP port for commands.
     """
-    def __init__(self, params={}):
+    def __init__(self, params=None):
         """
         Initialises the Server class for AFMulti.
         """
         self.socket = socket.socket()
         self.host = socket.gethostname()
+        if params is None:
+            params = {}
         self.port = params['control_port'] or DEFAULT_CONTROL_PORT
         #self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
