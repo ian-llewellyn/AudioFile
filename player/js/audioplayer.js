@@ -45,6 +45,17 @@ AudioPlayer.prototype.init = function() {
             // Check cookies or url for params.
         }
     });
+
+    $(this.id).bind($.jPlayer.event.timeupdate, function(event) { 
+        if(playerState.state == 'PLAYING')
+        {
+            currentTime = Math.floor(event.jPlayer.status.currentTime);
+            var offset = moment(playerState.playDate).add('seconds', currentTime);
+            console.log(offset);
+            $('#play_time').html( moment(offset).format('HH:mm:ss') );
+        }
+    });
+
 };
 
 
