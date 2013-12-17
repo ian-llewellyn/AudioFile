@@ -9,17 +9,15 @@ var playerDefaults = {
 	'startTrack': 'audio/sweet_dreams.mp3',
     'stationsUrl': 'http://audiofile.rte.ie/webservice/v3/listservices.php',
     'filelistUrl': 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
-    'audioUrl': 'http://audiofile.rte.ie/audio/',
-    'stations': undefined,
-    'defaultFormat':'mp3'
+    'downloadUrl': 'http://audiofile.rte.ie/audio/',
+    'stations': undefined
 };
 
 /* Track current player state. */
 var playerState = {
-    'station' : 'radio1',
-    'filename': undefined,
-    'date': moment.utc().format('YYYY-MM-DD'),
-    'mediaUrl': undefined
+    'station' : undefined,
+    'file': undefined,
+    'date': undefined
 };
 
 /* 
@@ -128,20 +126,16 @@ AudioPlayer.prototype.getFileList = function(service, date){
 
 
 /* 
-    Get a file url.
+    Get a download url for an audio file based on given params.
 */
 AudioPlayer.prototype.getFileUrl = function(format, service, date, file){
 
     // If we get a date object
-    try{
-        if(typeof date.getMonth === 'function'){
-            date = moment.utc(date).format('YYYY-MM-DD');
-        }
-    } catch(e){
-        console.log(e);
+    if(typeof date.getMonth === 'function'){
+        date = moment.utc(date).format('YYYY-MM-DD');
     }
 
-    return playerDefaults.audioUrl + format + "/" + service + "/" + date + "/" + file;
+    return playerDefaults.downloadUrl + format + "/" + service + "/" + date + "/" + file;
 };
 
 /* 
@@ -192,7 +186,7 @@ AudioPlayer.prototype.play = function() {
     - If no date is selected, load the file list for today.
     - Otherwise grab the files for selected date. 
 */
-AudioPlayer.prototype.setStation = function(stationid) {
+AudioPlayer.prototype.tune = function(stationid){
     var calendarDate = $( "#datepicker" ).datepicker( "getDate" );
     playerState.station = stationid;
     this.getFileList(stationid, calendarDate );
@@ -204,20 +198,10 @@ AudioPlayer.prototype.setStation = function(stationid) {
 
     - Only update if we already have a station.
 */
-AudioPlayer.prototype.changeDate = function(date) {
+AudioPlayer.prototype.changeDate = function(date){
     if(playerState.station !== undefined)
     {
         playerState.date = date;
         this.getFileList(playerState.station, date );
     }
-};
-
-
-/*
-    Load a file from the file list as the currently selected media. 
-*/
-AudioPlayer.prototype.selectFile = function(filename) {
-    playerState.file = filename;
-    playerState.mediaUrl = this.getFileUrl( playerDefaults.defaultFormat, playerState.station, playerState.date, filename);
-    this.setMediaSource(playerState.mediaUrl);
 };

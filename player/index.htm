@@ -99,12 +99,12 @@
 
 				<div class="row">
 					<div class="col-xs-4">
-					  RTE Radio 1<br />
-					  PLAYING
-					  LIVE<br />
-					  MP3<br />
-					  1X<br />
-					  83%<br />
+					  <span id="station_name">RTE Radio 1</span><br />
+					  <span id="playing_status">PLAYING</span><br />
+					  <span id="station_name">LIVE</span><br />
+					  <span id="file_type">MP3<span><br />
+					  <span id="speed">1X</span><br />
+					  <span id="percentage">83%</span><br />
 					</div>
 
 					<div class="col-xs-4 centre">
@@ -113,20 +113,24 @@
 					</div>
 
 					<div class="col-xs-4 right">
-					  08/06/2013 - 12:42:20<br />
-					  08/06/2013 - 14:22:11
+					  <span id="start-point">08/06/2013 - 12:42:2</span><br />
+					  <span id="end-point">08/06/2013 - 14:22:11</span>
 					</div>
 				</div><!-- /row -->
+
+
+<style>
+button:focus { outline: none !important; } 
+
+</style>
+
 
 				<div class="row controls">
 					<div class="col-xs-12" style="background-color:transparent; margin-top:10px;">
 
 						  <div class="row" style="margin:10px 0px 0px 0px">
-						  	<div class="" style="padding-right:0; width:294px; float:left;">
-				                <div class="btn-group btn-outline" 
-
-				                style="border-radius:18px 0px 0px 18px; border-right:0px">
-
+						  	<div class="btn-group-back">
+				                <div class="btn-group btn-outline">
 				                  <button class="btn btn-default btn-sm" type="button">30m</button>
 				                  <button class="btn btn-default btn-sm" type="button">5m</button>
 				                  <button class="btn btn-default btn-sm" type="button">30s</button>
@@ -134,30 +138,22 @@
 				                </div>
 						  	</div><!-- /col5 -->
 
-						  	<div class="" style="width:72px; float:left;">
-				                <div class="btn-outline" 
-				                style="border-radius:0px 0px 25px 25px; border-left:0; border-right:0;">
-
-				                  <button 
-				                  style="margin:auto; text-align:centre; border-radius: 20px; font-size:30px; line-height:20px;" class="btn btn-default btn-lg" 
-
-				                  type="button">
+						  	<div class="btn-outline-group">
+				                <div class="btn-outline">
+				                  <button class="btn btn-default btn-lg play" type="button">
 				                  	<span id="playbutton" class="icon rte-icon-play-1" onclick="return player.play();" style=""></span>
 				                  </button>
 				                </div>
-						  	</div><!-- /col5 -->
+						  	</div><!-- / -->
 
-						  	<div class="" style="padding-left:0; width:294px; float:left;">
-				                <div class="btn-group btn-outline pull-right" 
-
-				                style="border-radius:0px 18px 18px 0px; border-left:0px; padding-left:30px;">
-
+						  	<div class="btn-group-forward">
+				                <div class="btn-group btn-outline pull-right">
 				                  <button class="btn btn-default btn-sm" type="button">5s</button>
 				                  <button class="btn btn-default btn-sm" type="button">30s</button>
 				                  <button class="btn btn-default btn-sm" type="button">5m</button>
 				                  <button class="btn btn-default btn-sm" type="button">30m</button>
 				                </div>
-						  	</div><!-- /col5 -->
+						  	</div><!-- / -->
 						  </div>
 
 
@@ -171,7 +167,6 @@
 			                </div>
 						  </div>
 
-
 						  <div class="pull-right" style="margin-top:-11px;">
 			                <div class="btn-group">
 			                  <button class="btn btn-default btn-sm" type="button">1x</button>
@@ -181,9 +176,6 @@
 						  </div>
 
 		            	</div>
-
-
-
 
 						<div class="row mark">
 						  	<div class="col-xs-12">
@@ -357,7 +349,12 @@
 		      </ol>
 		      <div class="carousel-inner">
 		        <div class="item active">
-
+<style>
+.thumbnails li.active a {
+	border-radius:10px;
+	border:3px solid #1C1E22;
+}
+</style>
 					<ul class="thumbnails slides" id="stations_block_0"></ul>
 
 		        </div>
@@ -434,7 +431,7 @@
 
 	<script id="stationblock" type="text/html">
 		<li class="col-xs-2">
-			<a class="_tooltip" href="javascript:void(0);" onclick="return player.setStation('{{ id }}');" title="{{ title }}">
+			<a class="_tooltip" href="javascript:void(0);" onclick="return player.tune('{{ id }}');" title="{{ title }}">
 				<img alt="{{ title }}" class="" src="{{ image_url }}">
 			</a>
 		</li>
@@ -442,7 +439,7 @@
 
 	<script id="fileblock" type="text/html">
 		<li>
-			<a href="javascript:void(0);" onclick="player.selectFile('{{ file }}');">{{ title }}</a>
+			<a href="javascript:void(0);" onclick="console.log('{{ file }}');">{{ title }}</a>
 		</li>
 	</script>
 </body>

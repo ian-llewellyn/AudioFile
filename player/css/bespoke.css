@@ -111,15 +111,55 @@ line-height: 17px;
   vertical-align: bottom;
 }
 
+.btn-outline-group {
+  width:72px; 
+  float:left;
+}
+
 .btn-outline {
-  border-radius:18px;
   padding:3px;
   width:100%;
-    border: 1px solid #2B2B2F;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid #2B2B2F;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
+  /*border-radius:18px;*/
+  border-radius:0px 0px 25px 25px; 
+  border-left:0; 
+  border-right:0;
 }
 
 .mark button {width:212px;}
+
+
+.btn-group-back {
+  padding-right:0; 
+  width:294px; 
+  float:left;
+}
+
+.btn-group-forward {
+  padding-left:0; 
+  width:294px; 
+  float:left;
+}
+
+.btn-group-forward .btn-outline {
+  border-radius:0px 18px 18px 0px; 
+  border-left:0px; 
+  padding-left:30px;
+}
+
+.btn-group-back .btn-group {
+  border-radius:18px 0px 0px 18px; 
+  border-right:0px
+}
+
+.play {
+  margin:auto; 
+  text-align:centre; 
+  border-radius: 20px; 
+  font-size:30px; 
+  line-height:20px;
+}
 
 
 /* DATEPICKER
@@ -244,25 +284,23 @@ height:400px;
 {
 width: 295px; /* when items and programmes are finished change this back to 215px */
 padding: 0;
-/*background-color: #90bade;*/
 color: #333;
 }
 
 ul.navlist 
 {
-
 list-style: none;
 margin: 0;
-/*margin-top:-15px;*/
 margin-right:-25px;
 margin-left:-9px;
 padding: 0;
 border: none;
+margin-bottom: 20px;
 }
 
 .navlist li
 {
-                      border-bottom: 1px solid #90bade;
+border-bottom: 1px solid #90bade;
 margin: 0;
 }
 
@@ -270,7 +308,6 @@ margin: 0;
 {
 display: block;
 padding: 5px 5px 5px 0.5em;
-                      /*background-color: #2175bc;*/
 color: #0088CC;
 text-decoration: none;
 width: 100%;
@@ -280,7 +317,7 @@ html>body .navlist li a { width: auto; }
 
 .navlist li a:hover
 {
-                      background-color: #2586d7;
+background-color: #2586d7;
 color: #fff;
 }
 
@@ -288,8 +325,6 @@ color: #fff;
   background-color: #2E3338;
   color:white;
 }
-
-
 
 /* CUSTOMIZE THE CAROUSEL
 -------------------------------------------------- */
