@@ -47,7 +47,9 @@
 	$(function() {
 		
 		$( "#datepicker" ).datepicker({
-			inline: true
+			inline: true,
+			maxDate: 0,
+			firstDay: 1
 		});
 		
 		// Hover states on the static widgets
@@ -112,19 +114,15 @@
 					</div>
 				</div><!-- /row -->
 
-
-<style>
-button:focus { outline: none !important; } 
-
-</style>
-
-
 				<div class="row controls">
 					<div class="col-xs-12" style="background-color:transparent; margin-top:10px;">
 
 						  <div class="row" style="margin:10px 0px 0px 0px">
-						  	<div class="btn-group-back">
-				                <div class="btn-group btn-outline">
+						  	<div class="" style="padding-right:0; width:294px; float:left;">
+				                <div class="btn-group btn-outline" 
+
+				                style="border-radius:18px 0px 0px 18px; border-right:0px">
+
 				                  <button class="btn btn-default btn-sm" type="button">30m</button>
 				                  <button class="btn btn-default btn-sm" type="button">5m</button>
 				                  <button class="btn btn-default btn-sm" type="button">30s</button>
@@ -132,22 +130,30 @@ button:focus { outline: none !important; }
 				                </div>
 						  	</div><!-- /col5 -->
 
-						  	<div class="btn-outline-group">
-				                <div class="btn-outline">
-				                  <button class="btn btn-default btn-lg play" type="button">
+						  	<div class="" style="width:72px; float:left;">
+				                <div class="btn-outline" 
+				                style="border-radius:0px 0px 25px 25px; border-left:0; border-right:0;">
+
+				                  <button 
+				                  style="margin:auto; text-align:centre; border-radius: 20px; font-size:30px; line-height:20px;" class="btn btn-default btn-lg" 
+
+				                  type="button">
 				                  	<span id="playbutton" class="icon rte-icon-play-1" onclick="return player.play();" style=""></span>
 				                  </button>
 				                </div>
-						  	</div><!-- / -->
+						  	</div><!-- /col5 -->
 
-						  	<div class="btn-group-forward">
-				                <div class="btn-group btn-outline pull-right">
+						  	<div class="" style="padding-left:0; width:294px; float:left;">
+				                <div class="btn-group btn-outline pull-right" 
+
+				                style="border-radius:0px 18px 18px 0px; border-left:0px; padding-left:30px;">
+
 				                  <button class="btn btn-default btn-sm" type="button">5s</button>
 				                  <button class="btn btn-default btn-sm" type="button">30s</button>
 				                  <button class="btn btn-default btn-sm" type="button">5m</button>
 				                  <button class="btn btn-default btn-sm" type="button">30m</button>
 				                </div>
-						  	</div><!-- / -->
+						  	</div><!-- /col5 -->
 						  </div>
 
 
@@ -161,6 +167,7 @@ button:focus { outline: none !important; }
 			                </div>
 						  </div>
 
+
 						  <div class="pull-right" style="margin-top:-11px;">
 			                <div class="btn-group">
 			                  <button class="btn btn-default btn-sm" type="button">1x</button>
@@ -170,6 +177,9 @@ button:focus { outline: none !important; }
 						  </div>
 
 		            	</div>
+
+
+
 
 						<div class="row mark">
 						  	<div class="col-xs-12">
@@ -268,30 +278,12 @@ button:focus { outline: none !important; }
         <div class="col-xs-6">
 
 			<div class="panel panel-default" style="width:333px; -webkit-border-radius: 0 0 0 0; border-radius: 0 0 0 0;">
-			        <!-- when items and programmes are finished navlist width in bespoke.css back to 215px -->
 			        <div id="two">
 			            <ol>
 			                <li>
 			                    <h2><span>Hours</span></h2>
 			                    <div>
-									<ul class="navlist">
-										<li id="active"><a href="#" id="current">00:00</a></li>
-										<li><a href="#">01:00</a></li>
-										<li><a href="#">02:00</a></li>
-										<li><a href="#">03:00</a></li>
-										<li><a href="#">04:00</a></li>
-										<li><a href="#">05:00</a></li>
-										<li><a href="#">06:00</a></li>
-										<li><a href="#">07:00</a></li>
-										<li><a href="#">08:00</a></li>
-										<li><a href="#">09:00</a></li>
-										<li><a href="#">10:00</a></li>
-										<li><a href="#">11:00</a></li>
-										<li><a href="#">12:00</a></li>
-										<li><a href="#">01:00</a></li>
-										<li><a href="#">02:00</a></li>
-										<li><a href="#">03:00</a></li>
-										<li><a href="#">04:00</a></li>
+									<ul class="navlist" id="filelist">
 									</ul>
 			                    </div>
 			                </li>
@@ -440,6 +432,12 @@ button:focus { outline: none !important; }
 			<a class="_tooltip" href="javascript:void(0);" onclick="return player.tune('{{ id }}');" title="{{ title }}">
 				<img alt="{{ title }}" class="" src="{{ image_url }}">
 			</a>
+		</li>
+	</script>
+
+	<script id="fileblock" type="text/html">
+		<li>
+			<a href="javascript:void(0);" onclick="console.log('{{ file }}');">{{ title }}</a>
 		</li>
 	</script>
 </body>

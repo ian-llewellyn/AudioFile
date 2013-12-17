@@ -13,6 +13,12 @@ var playerDefaults = {
     'stations': undefined
 };
 
+/* Track current player state. */
+var playerState = {
+    'station' : undefined,
+    'file': undefined,
+    'date': undefined
+};
 
 /* 
     Our constructor 
@@ -63,7 +69,7 @@ AudioPlayer.prototype.getServices = function() {
                 }
 
                 // Use ICH template to fill a station block.
-                jQuery(blockPrefix + slotTemp).append( ich.stationblock( stations.services[i] ) );
+                $(blockPrefix + slotTemp).append( ich.stationblock( stations.services[i] ) );
             }
 
         },
@@ -101,8 +107,15 @@ AudioPlayer.prototype.getFileList = function(service, date){
         jsonpCallback: 'callback',
         contentType: "application/json",
         dataType: 'jsonp',
-        success: function(data) {
-           console.log(data);
+        success: function(filelist) {
+            var listLength = filelist.files.length;
+            var fileBlockID = '#filelist';
+            $(fileBlockID).empty();
+            for( var i = 0; i < listLength;  i++)
+            {
+                // Use ICH template to fill a file block.
+                $(fileBlockID).append( ich.fileblock( filelist.files[i] ) );
+            }
         },
         error: function(e) {
            console.log(e.message);
@@ -171,6 +184,8 @@ AudioPlayer.prototype.play = function() {
     Tune the Radio to the selected station.
 */
 AudioPlayer.prototype.tune = function(stationid){
-    console.log(stationid);
+    playerState.station = stationid;
+    var calendarDate = $( "#datepicker" ).datepicker( "getDate" );
+    this.getFileList(stationid, calendarDate );
 };
 

@@ -111,55 +111,15 @@ line-height: 17px;
   vertical-align: bottom;
 }
 
-.btn-outline-group {
-  width:72px; 
-  float:left;
-}
-
 .btn-outline {
+  border-radius:18px;
   padding:3px;
   width:100%;
-  border: 1px solid #2B2B2F;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
-  /*border-radius:18px;*/
-  border-radius:0px 0px 25px 25px; 
-  border-left:0; 
-  border-right:0;
+    border: 1px solid #2B2B2F;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .mark button {width:212px;}
-
-
-.btn-group-back {
-  padding-right:0; 
-  width:294px; 
-  float:left;
-}
-
-.btn-group-forward {
-  padding-left:0; 
-  width:294px; 
-  float:left;
-}
-
-.btn-group-forward .btn-outline {
-  border-radius:0px 18px 18px 0px; 
-  border-left:0px; 
-  padding-left:30px;
-}
-
-.btn-group-back .btn-group {
-  border-radius:18px 0px 0px 18px; 
-  border-right:0px
-}
-
-.play {
-  margin:auto; 
-  text-align:centre; 
-  border-radius: 20px; 
-  font-size:30px; 
-  line-height:20px;
-}
 
 
 /* DATEPICKER
@@ -282,7 +242,7 @@ height:400px;
 
 .navlist
 {
-width: 295px; /* when items and programmes are finished change this back to 215px */
+width: 215px;
 padding: 0;
 /*background-color: #90bade;*/
 color: #333;
