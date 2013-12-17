@@ -17,9 +17,12 @@ var playerDefaults = {
 /* Track current player state. */
 var playerState = {
     'station' : 'radio1',
+    'stationName':'RTE Radio 1',
     'filename': undefined,
     'date': moment.utc().format('YYYY-MM-DD'),
-    'mediaUrl': undefined
+    'mediaUrl': undefined,
+    'playDate': undefined,
+    'state':'STOPPED'
 };
 
 /* 
@@ -43,6 +46,16 @@ AudioPlayer.prototype.init = function() {
         }
     });
 };
+
+
+/*
+    Convert filename to data object.
+*/
+AudioPlayer.prototype.parseFileDate = function(filename) {
+    filename = filename.replace('.mp3','');
+    return moment.utc(filename,'YYYY-MM-DD-HH-mm-ss-SS').format()
+};
+
 
 /* 
     Get a list of stations from the web service 
@@ -170,13 +183,15 @@ AudioPlayer.prototype.play = function() {
     {
         $('#playbutton').removeClass('rte-icon-pause-1'); 
         $('#playbutton').addClass('rte-icon-play-1');      
-        console.log("Pause media.");
+        $(player.id).jPlayer('pause');
+        $('#playing_status').html('PAUSED');
     }
     else if( $('.rte-icon-play-1').length !== 0 ) 
     {
         $('#playbutton').removeClass('rte-icon-play-1'); 
         $('#playbutton').addClass('rte-icon-pause-1');  
-        console.log("Play media");
+        $(player.id).jPlayer('play');
+        $('#playing_status').html('PLAYING');
     }
     else
     {
@@ -192,10 +207,12 @@ AudioPlayer.prototype.play = function() {
     - If no date is selected, load the file list for today.
     - Otherwise grab the files for selected date. 
 */
-AudioPlayer.prototype.setStation = function(stationid) {
+AudioPlayer.prototype.setStation = function(stationid, name) {
     var calendarDate = $( "#datepicker" ).datepicker( "getDate" );
     playerState.station = stationid;
+    playerState.stationName = name;
     this.getFileList(stationid, calendarDate );
+    $('#station_name').html(playerState.stationName);
 };
 
 
@@ -217,7 +234,11 @@ AudioPlayer.prototype.changeDate = function(date) {
     Load a file from the file list as the currently selected media. 
 */
 AudioPlayer.prototype.selectFile = function(filename) {
-    playerState.file = filename;
+    playerState.filename = filename;
     playerState.mediaUrl = this.getFileUrl( playerDefaults.defaultFormat, playerState.station, playerState.date, filename);
     this.setMediaSource(playerState.mediaUrl);
+
+    playerState.playDate = player.parseFileDate( playerState.filename );
+    console.log(moment(playerState.playDate).format('HH:mm:ss'));
+    $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );
 };
