@@ -49,7 +49,11 @@
 		$( "#datepicker" ).datepicker({
 			inline: true,
 			maxDate: 0,
-			firstDay: 1
+			firstDay: 1,
+			dateFormat: "yy-mm-dd",
+		    onSelect: function (date) {
+		        player.changeDate(date);
+		    }			
 		});
 		
 		// Hover states on the static widgets
@@ -114,19 +118,15 @@
 					</div>
 				</div><!-- /row -->
 
-
-<style>
-button:focus { outline: none !important; } 
-
-</style>
-
-
 				<div class="row controls">
 					<div class="col-xs-12" style="background-color:transparent; margin-top:10px;">
 
 						  <div class="row" style="margin:10px 0px 0px 0px">
-						  	<div class="btn-group-back">
-				                <div class="btn-group btn-outline">
+						  	<div class="" style="padding-right:0; width:294px; float:left;">
+				                <div class="btn-group btn-outline" 
+
+				                style="border-radius:18px 0px 0px 18px; border-right:0px">
+
 				                  <button class="btn btn-default btn-sm" type="button">30m</button>
 				                  <button class="btn btn-default btn-sm" type="button">5m</button>
 				                  <button class="btn btn-default btn-sm" type="button">30s</button>
@@ -134,22 +134,30 @@ button:focus { outline: none !important; }
 				                </div>
 						  	</div><!-- /col5 -->
 
-						  	<div class="btn-outline-group">
-				                <div class="btn-outline">
-				                  <button class="btn btn-default btn-lg play" type="button">
+						  	<div class="" style="width:72px; float:left;">
+				                <div class="btn-outline" 
+				                style="border-radius:0px 0px 25px 25px; border-left:0; border-right:0;">
+
+				                  <button 
+				                  style="margin:auto; text-align:centre; border-radius: 20px; font-size:30px; line-height:20px;" class="btn btn-default btn-lg" 
+
+				                  type="button">
 				                  	<span id="playbutton" class="icon rte-icon-play-1" onclick="return player.play();" style=""></span>
 				                  </button>
 				                </div>
-						  	</div><!-- / -->
+						  	</div><!-- /col5 -->
 
-						  	<div class="btn-group-forward">
-				                <div class="btn-group btn-outline pull-right">
+						  	<div class="" style="padding-left:0; width:294px; float:left;">
+				                <div class="btn-group btn-outline pull-right" 
+
+				                style="border-radius:0px 18px 18px 0px; border-left:0px; padding-left:30px;">
+
 				                  <button class="btn btn-default btn-sm" type="button">5s</button>
 				                  <button class="btn btn-default btn-sm" type="button">30s</button>
 				                  <button class="btn btn-default btn-sm" type="button">5m</button>
 				                  <button class="btn btn-default btn-sm" type="button">30m</button>
 				                </div>
-						  	</div><!-- / -->
+						  	</div><!-- /col5 -->
 						  </div>
 
 
@@ -163,6 +171,7 @@ button:focus { outline: none !important; }
 			                </div>
 						  </div>
 
+
 						  <div class="pull-right" style="margin-top:-11px;">
 			                <div class="btn-group">
 			                  <button class="btn btn-default btn-sm" type="button">1x</button>
@@ -172,6 +181,9 @@ button:focus { outline: none !important; }
 						  </div>
 
 		            	</div>
+
+
+
 
 						<div class="row mark">
 						  	<div class="col-xs-12">

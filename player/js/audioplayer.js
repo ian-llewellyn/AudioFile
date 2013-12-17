@@ -182,10 +182,26 @@ AudioPlayer.prototype.play = function() {
 
 /* 
     Tune the Radio to the selected station.
+
+    - If no date is selected, load the file list for today.
+    - Otherwise grab the files for selected date. 
 */
 AudioPlayer.prototype.tune = function(stationid){
-    playerState.station = stationid;
     var calendarDate = $( "#datepicker" ).datepicker( "getDate" );
+    playerState.station = stationid;
     this.getFileList(stationid, calendarDate );
 };
 
+
+/* 
+    Update the file list for a given date.
+
+    - Only update if we already have a station.
+*/
+AudioPlayer.prototype.changeDate = function(date){
+    if(playerState.station !== undefined)
+    {
+        playerState.date = date;
+        this.getFileList(playerState.station, date );
+    }
+};
