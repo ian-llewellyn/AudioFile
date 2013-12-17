@@ -242,7 +242,7 @@ height:400px;
 
 .navlist
 {
-width: 215px;
+width: 295px; /* when items and programmes are finished change this back to 215px */
 padding: 0;
 /*background-color: #90bade;*/
 color: #333;
