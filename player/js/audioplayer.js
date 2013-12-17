@@ -9,8 +9,7 @@ var playerDefaults = {
 	'startTrack': 'audio/sweet_dreams.mp3',
     'stationsUrl': 'http://audiofile.rte.ie/webservice/v3/listservices.php',
     'filelistUrl': 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
-    'downloadUrl': 'http://audiofile.rte.ie/audio/',
-    'stations': undefined
+    'downloadUrl': 'http://audiofile.rte.ie/audio/'
 };
 
 
@@ -25,10 +24,7 @@ function AudioPlayer(id){
 /* 
     Init Method 
 */
-AudioPlayer.prototype.init = function() {
-    
-    this.getServices(); // Load our stations.
-
+AudioPlayer.prototype.init = function(){
     $(this.id).jPlayer( {
         ready: function () {
             // Check cookies or url for params.
@@ -39,33 +35,15 @@ AudioPlayer.prototype.init = function() {
 /* 
     Get a list of stations from the web service 
 */
-AudioPlayer.prototype.getServices = function() {
+AudioPlayer.prototype.getStations = function(){
     $.ajax({
        type: 'GET',
         url: playerDefaults.stationsUrl,
         jsonpCallback: 'callback',
         contentType: "application/json",
         dataType: 'jsonp',
-        success: function(stations) {
-            this.stations = stations;
-            var serviceLength = stations.services.length;
-            var carouselLength = 5; // 5 slides
-            var carouselSlots = 6; // 6 slots in each slide
-            var blockPrefix = "#stations_block_"; 
-            var slotTemp = -1; // We want to start at 0, this will be incremented on run.
-            // Loop all available services.
-            for(var i = 0; i < serviceLength; i++)
-            {
-                // If we are at a slide boundary, advance to next slot.
-                if( !(i % carouselSlots) )
-                {
-                    slotTemp++;
-                }
-
-                // Use ICH template to fill a station block.
-                jQuery(blockPrefix + slotTemp).append( ich.stationblock( stations.services[i] ) );
-            }
-
+        success: function(data) {
+           return data;
         },
         error: function(e) {
            console.log(e.message);
@@ -102,7 +80,7 @@ AudioPlayer.prototype.getFileList = function(service, date){
         contentType: "application/json",
         dataType: 'jsonp',
         success: function(data) {
-           console.log(data);
+           return data;
         },
         error: function(e) {
            console.log(e.message);
@@ -137,13 +115,5 @@ AudioPlayer.prototype.setMediaSource = function(url){
 	if(this.id){
 		$(this.id).jPlayer( "setMedia", { "mp3": url } );
 	}
-};
-
-
-/* 
-    Tune the Radio to the selected station.
-*/
-AudioPlayer.prototype.tune = function(stationid){
-    console.log(stationid);
 };
 

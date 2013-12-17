@@ -15,21 +15,56 @@
     <!-- Bootstrap core CSS -->
     <link href="dist/css/style.css" rel="stylesheet">
 
-    <!-- Custom styles for this template -->
-    <link href="css/bespoke.css" rel="stylesheet">
+    <!-- Custom styles for this -->
     <link href="css/icon-styles.css" rel="stylesheet">
+    <link href="css/liteaccordion.css" rel="stylesheet" />
+	<link href="jquery-ui-1.10.3.custom/css/black-tie/jquery-ui-1.10.3.custom.css" rel="stylesheet">
+    <link href="css/bespoke.css" rel="stylesheet">
+
 
     <script src="dist/js/jquery.js"></script>
-
-<!--<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>-->
 
     <!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!--[if lt IE 9]>
       <script src="dist/js/html5shiv.js"></script>
     <![endif]-->
 
+    <!-- easing -->
+    <script src="js/jquery.easing.1.3.js"></script>
+    <!-- liteAccordion js -->
+    <script src="js/liteaccordion.jquery.js"></script>
+
+    <!--[if lt IE 9]>
+	    <script>
+	        document.createElement('figure');
+	        document.createElement('figcaption');
+	    </script>
+    <![endif]-->
+
+	<!--<script src="jquery-ui-1.10.3.custom/js/jquery-1.9.1.js"></script>-->
+	<script src="jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.js"></script>
+	<script>
+	$(function() {
+		
+		$( "#datepicker" ).datepicker({
+			inline: true
+		});
+		
+		// Hover states on the static widgets
+		$( "#dialog-link, #icons li" ).hover(
+			function() {
+				$( this ).addClass( "ui-state-hover" );
+			},
+			function() {
+				$( this ).removeClass( "ui-state-hover" );
+			}
+		);
+	});
+	</script>
+
+
 </head>
-<body>
+<body id="dates">
 
 	<!-- Fixed navbar -->
 	<div id="header">
@@ -68,7 +103,7 @@
 
 					<div class="col-xs-4 centre">
 					  <h1>08/06/2013</h1>
-					  <h1 class="time jp-current-time">23:41:11</h1>
+					  <h1 class="time">23:41:11</h1>
 					</div>
 
 					<div class="col-xs-4 right">
@@ -160,34 +195,6 @@
 						  	</div><!-- /col12 -->
 						  </div>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 						<!--
 						<div id="jquery_jplayer_1" class="jp-jplayer"></div>
 
@@ -254,170 +261,94 @@
       <div class="row">
         <div class="col-xs-6">
 
-<style>
-#accordion {
-list-style: none;
-margin: 0px 0;
-padding: 0;
-height: 200px;
-overflow: hidden;
-/*background: #7d8d96;*/
-}
- 
-#accordion > li {
-float: left;
-border-left:0;
-display: block;
-height: 200px;
-width: 50px;
-padding: 15px 0;
-overflow: hidden;
-color: #fff;
-text-decoration: none;
-font-size: 16px;
-line-height: 1.5em;
-border-left: 1px solid #fff;
-}
- 
-#accordion > li img {
-border: none;
-border-right: 1px solid #fff;
-float: left;
-margin: -15px 15px 0 0;
-}
- 
-#accordion > li.active {
-width: 220px;
-}
-
-
-
-ul#accordion li ul li {
-
-}
-
-.panel-body {
-	content: over;
-	height: 340px;
-    float: left;
-    overflow: auto;
-    overflow-y: hidden;
-}
-
-
-
-#navlist
-{
-width: 100%;
-padding: 0;
-background-color: #90bade;
-color: #333;
-}
-
-ul#navlist 
-{
-
-list-style: none;
-margin: 0;
-margin-top:-15px;
-margin-right:-15px;
-padding: 0;
-border: none;
-}
-
-#navlist li
-{
-border-bottom: 1px solid #90bade;
-margin: 0;
-}
-
-#navlist li a
-{
-display: block;
-padding: 5px 5px 5px 0.5em;
-background-color: #2175bc;
-color: #fff;
-text-decoration: none;
-width: 100%;
-}
-
-html>body #navlist li a { width: auto; }
-
-#navlist li a:hover
-{
-background-color: #2586d7;
-color: #fff;
-}
-
-</style>
-
-
 			<div class="panel panel-default">
 
 			  <div class="panel-heading">
 			    <h3 class="panel-title">Days</h3>
 			  </div>
 			  <div class="panel-body">
-			    Include calander here
+
+				<div id="datepicker"></div>
+
 			  </div>
 			</div>
         </div>
         <div class="col-xs-6">
 
-
-			<div class="panel panel-default">
-
-<!-- 			  <div class="panel-heading">
-			    <h3 class="panel-title">Days</h3>
-			  </div> -->
-			  <div class="panel-body" style="margin:0; padding:0">
-
-				<ul id="accordion">
-			      <li>
-			      	<img src="dist/img/section_1.png">
-
-			        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In iaculis volutpat quam, non suscipit arcu accumsan at. Aliquam pellentesque.
-			      </li>
-			      <li>
-			      	<img src="dist/img/section_2.png">
-			        <strong>Section 2 Header</strong><br/>
-			        Lorem ipsum dolor sit amet, consectetur adipiscing elit. In iaculis volutpat quam, non suscipit arcu accumsan at. Aliquam pellentesque.
-			      </li>
-			      <li>
-			      	<img src="dist/img/section_3.png">
-
-
-
-<ul id="navlist">
-<li id="active"><a href="#" id="current">Item one</a></li>
-<li><a href="#">Item two</a></li>
-<li><a href="#">Item three</a></li>
-<li><a href="#">Item four</a></li>
-<li><a href="#">Item five</a></li>
-</ul>
-
-
-
-			      </li>
-			  	</ul>
-
-
-			  </div>
+			<div class="panel panel-default" style="width:333px; -webkit-border-radius: 0 0 0 0; border-radius: 0 0 0 0;">
+			        <div id="two">
+			            <ol>
+			                <li>
+			                    <h2><span>Hours</span></h2>
+			                    <div>
+									<ul class="navlist">
+										<li id="active"><a href="#" id="current">00:00</a></li>
+										<li><a href="#">01:00</a></li>
+										<li><a href="#">02:00</a></li>
+										<li><a href="#">03:00</a></li>
+										<li><a href="#">04:00</a></li>
+										<li><a href="#">05:00</a></li>
+										<li><a href="#">06:00</a></li>
+										<li><a href="#">07:00</a></li>
+										<li><a href="#">08:00</a></li>
+										<li><a href="#">09:00</a></li>
+										<li><a href="#">10:00</a></li>
+										<li><a href="#">11:00</a></li>
+										<li><a href="#">12:00</a></li>
+										<li><a href="#">01:00</a></li>
+										<li><a href="#">02:00</a></li>
+										<li><a href="#">03:00</a></li>
+										<li><a href="#">04:00</a></li>
+									</ul>
+			                    </div>
+			                </li>
+			                <li>
+			                    <h2><span>Programs</span></h2>
+			                    <div>
+			                        <h3>This is Slide Two.</h3>
+			                        <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
+			                            magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi. <br /><a href="#">Link somewhere</a>
+			                        </p>
+			                    </div>
+			                </li>
+			                <li>
+			                    <h2><span>Items</span></h2>
+			                    <div>
+									<ul class="navlist">
+										<li id="active"><a href="#" id="current">00:00</a></li>
+										<li><a href="#">01:00</a></li>
+										<li><a href="#">02:00</a></li>
+										<li><a href="#">03:00</a></li>
+										<li><a href="#">04:00</a></li>
+										<li><a href="#">05:00</a></li>
+										<li><a href="#">06:00</a></li>
+										<li><a href="#">07:00</a></li>
+										<li><a href="#">08:00</a></li>
+										<li><a href="#">09:00</a></li>
+										<li><a href="#">10:00</a></li>
+										<li><a href="#">11:00</a></li>
+										<li><a href="#">12:00</a></li>
+										<li><a href="#">01:00</a></li>
+										<li><a href="#">02:00</a></li>
+										<li><a href="#">03:00</a></li>
+										<li><a href="#">04:00</a></li>
+									</ul>
+			                    </div>
+			                </li>
+			            </ol>
+			        </div>
 			</div>
 
-
-
-
-
-
+	        <!-- liteAccordion -->
+	        <script>
+	            (function($, d) {
+	                $('#two').liteAccordion();
+	            })(jQuery, document);
+	        </script>
 
         </div>
       </div>
 	</div><!-- /.container -->
-
-
-
-
 
 	<div class="container">
       <div class="row">
@@ -429,35 +360,44 @@ color: #fff;
 		        <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
 		        <li data-target="#myCarousel" data-slide-to="1"></li>
 		        <li data-target="#myCarousel" data-slide-to="2"></li>
-		        <li data-target="#myCarousel" data-slide-to="3"></li>
-		        <li data-target="#myCarousel" data-slide-to="4"></li>
 		      </ol>
 		      <div class="carousel-inner">
 		        <div class="item active">
 
-					<ul class="thumbnails slides" id="stations_block_0"></ul>
+					<ul class="thumbnails slides">
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+					</ul>
 
 		        </div>
 		        <div class="item">
 		          
-					<ul class="thumbnails slides"  id="stations_block_1"></ul>
+					<ul class="thumbnails slides">
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+					</ul>
 
 		        </div>
 		        <div class="item">
 
-					<ul class="thumbnails slides" id="stations_block_2"></ul>
+					<ul class="thumbnails slides">
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
+					</ul>
 
 		        </div>
-		        <div class="item">
-
-					<ul class="thumbnails slides"  id="stations_block_3"></ul>
-
-		        </div>
-		        <div class="item">
-
-					<ul class="thumbnails slides"  id="stations_block_4"></ul>
-
-		        </div>		        		        
 		      </div><!-- Carousel inner -->
 
 		      <a class="left carousel-control" href="index.html#myCarousel" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a>
@@ -490,7 +430,6 @@ color: #fff;
     <script type="text/javascript" src="js/audioplayer.js"></script>
 
 	<script type="text/javascript">
-		var player = undefined;
 	    $(document).ready(function() {   
 
 			$('.carousel').carousel(
@@ -499,28 +438,15 @@ color: #fff;
 				interval: false
 			});
 
-		    var activeItem = $("#accordion > li:first");
-		    $(activeItem).addClass('active');
-		 
-		    $("#accordion > li").hover(function(){
-		        $(activeItem).animate({width: "50px"}, {duration:300, queue:false});
-		        $(this).animate({width: "220px"}, {duration:300, queue:false});
-		        activeItem = this;
-		    });
+		    // var activeItem = $("#accordion > li:first");
+		    // $(activeItem).addClass('active');
 
 		    // Audio player init
+			var player = undefined;
 			player = new AudioPlayer("#jpId");
 	});
 	</script>
 	<!-- Hidden Anchor div for jPlayer -->
 	<div id="jpId"></div>
-
-	<script id="stationblock" type="text/html">
-		<li class="col-xs-2">
-			<a class="_tooltip" href="javascript:void(0);" onclick="return player.tune('{{ id }}');" title="{{ title }}">
-				<img alt="{{ title }}" class="" src="{{ image_url }}">
-			</a>
-		</li>
-	</script>
 </body>
 </html>
