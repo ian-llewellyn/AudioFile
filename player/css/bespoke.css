@@ -284,25 +284,23 @@ height:400px;
 {
 width: 295px; /* when items and programmes are finished change this back to 215px */
 padding: 0;
-/*background-color: #90bade;*/
 color: #333;
 }
 
 ul.navlist 
 {
-
 list-style: none;
 margin: 0;
-/*margin-top:-15px;*/
 margin-right:-25px;
 margin-left:-9px;
 padding: 0;
 border: none;
+margin-bottom: 20px;
 }
 
 .navlist li
 {
-                      border-bottom: 1px solid #90bade;
+border-bottom: 1px solid #90bade;
 margin: 0;
 }
 
@@ -310,7 +308,6 @@ margin: 0;
 {
 display: block;
 padding: 5px 5px 5px 0.5em;
-                      /*background-color: #2175bc;*/
 color: #0088CC;
 text-decoration: none;
 width: 100%;
@@ -320,7 +317,7 @@ html>body .navlist li a { width: auto; }
 
 .navlist li a:hover
 {
-                      background-color: #2586d7;
+background-color: #2586d7;
 color: #fff;
 }
 
@@ -328,8 +325,6 @@ color: #fff;
   background-color: #2E3338;
   color:white;
 }
-
-
 
 /* CUSTOMIZE THE CAROUSEL
 -------------------------------------------------- */
