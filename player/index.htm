@@ -431,7 +431,7 @@ button:focus { outline: none !important; }
 
 	<script id="stationblock" type="text/html">
 		<li class="col-xs-2">
-			<a class="_tooltip" href="javascript:void(0);" onclick="return player.tune('{{ id }}');" title="{{ title }}">
+			<a class="_tooltip" href="javascript:void(0);" onclick="return player.setStation('{{ id }}');" title="{{ title }}">
 				<img alt="{{ title }}" class="" src="{{ image_url }}">
 			</a>
 		</li>
@@ -439,7 +439,7 @@ button:focus { outline: none !important; }
 
 	<script id="fileblock" type="text/html">
 		<li>
-			<a href="javascript:void(0);" onclick="console.log('{{ file }}');">{{ title }}</a>
+			<a href="javascript:void(0);" onclick="player.selectFile('{{ file }}');">{{ title }}</a>
 		</li>
 	</script>
 </body>
