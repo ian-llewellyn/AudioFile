@@ -122,16 +122,171 @@ line-height: 17px;
 .mark button {width:212px;}
 
 
+/* DATEPICKER
+-------------------------------------------------- */
+
+#datepicker {
+  background-color:transparent;
+  margin:0;
+  padding:0;
+}
+
+.ui-datepicker {
+  background-color: #3E444C !important;
+  width:100%;
+  padding:5px;
+  border:0;
+}
+
+.ui-datepicker-calendar {
+  background-color: #3E444C;
+}
+
+#dates .ui-widget-content {
+  background: url("images/ui-bg_highlight-hard_100_f9f9f9_1x100.png") repeat-x scroll 50% top transparent;
+  border: 2px solid #3E444C;
+}
+
+.ui-datepicker table {
+  margin: 0;
+}
+
 /* COLLAPSE
 -------------------------------------------------- */
-.collapse.width {
+/*.collapse.width {
     height: auto;
     -webkit-transition: width 0.35s ease;
     -moz-transition: width 0.35s ease;
     -o-transition: width 0.35s ease;
     transition: width 0.35s ease;
 
-/*    width:0;*/
+
+}
+
+#accordion {
+list-style: none;
+margin: 0px 0;
+padding: 0;
+height: 400px;
+
+}
+ 
+#accordion > li {
+float: left;
+border-left:0;
+display: block;
+height: 400px;
+width: 30px;
+padding: 15px 0;
+
+color: #fff;
+text-decoration: none;
+font-size: 16px;
+line-height: 1.5em;
+border-left: 1px solid #fff;
+}
+
+#accordion > li:first-child {
+  border:0px;
+  }
+ 
+#accordion > li img {
+border: none;
+border-bottom:#5b6c74 200px solid;
+float: left;
+margin: -15px 0px 0 0;
+
+}
+ 
+#accordion > li.active {
+width: 210px;
+}
+
+
+#accordion > li ul {
+margin-left: 30px;
+border-left: 1px solid #fff;
+height:400px;
+}
+
+.panel-body-scroll {
+    height: 400px;
+    overflow: scroll !important;
+    overflow-x: hidden !important;
+}
+
+ #hours, #programs, #items {
+    overflow: visible !important; 
+}*/
+
+/*ul#accordion li ul li {
+
+}*/
+
+#two ol *,
+#two ol *:before,
+#two ol *:after {
+  -webkit-box-sizing: content-box;
+  -moz-box-sizing: content-box;
+  box-sizing: content-box;
+}
+
+.liteAccordion .slide > div
+ {
+    height: 340px !important;
+    float: left !important;
+    overflow: auto !important;
+    overflow-x:hidden !important;
+    margin-left:10px;
+}
+
+.navlist
+{
+width: 215px;
+padding: 0;
+/*background-color: #90bade;*/
+color: #333;
+}
+
+ul.navlist 
+{
+
+list-style: none;
+margin: 0;
+/*margin-top:-15px;*/
+margin-right:-25px;
+margin-left:-9px;
+padding: 0;
+border: none;
+}
+
+.navlist li
+{
+                      border-bottom: 1px solid #90bade;
+margin: 0;
+}
+
+.navlist li a
+{
+display: block;
+padding: 5px 5px 5px 0.5em;
+                      /*background-color: #2175bc;*/
+color: #0088CC;
+text-decoration: none;
+width: 100%;
+}
+
+html>body .navlist li a { width: auto; }
+
+.navlist li a:hover
+{
+                      background-color: #2586d7;
+color: #fff;
+}
+
+.navlist li#active a, .navlist li#active a:visited {
+  background-color: #2E3338;
+  color:white;
 }
 
 
