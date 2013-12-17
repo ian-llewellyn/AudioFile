@@ -116,3 +116,9 @@
 .rte-icon-tortoise:before {
   content: "A";
 }
+.rte-icon-elusive-icons:before {
+  content: "w";
+}
+.rte-icon-fontawesome-webfont:before {
+  content: "B";
+}
