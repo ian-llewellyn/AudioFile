@@ -103,7 +103,7 @@
 
 					<div class="col-xs-4 centre">
 					  <h1>08/06/2013</h1>
-					  <h1 class="time">23:41:11</h1>
+					  <h1 class="time jp-current-time">23:41:11</h1>
 					</div>
 
 					<div class="col-xs-4 right">
@@ -360,44 +360,35 @@
 		        <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
 		        <li data-target="#myCarousel" data-slide-to="1"></li>
 		        <li data-target="#myCarousel" data-slide-to="2"></li>
+		        <li data-target="#myCarousel" data-slide-to="3"></li>
+		        <li data-target="#myCarousel" data-slide-to="4"></li>
 		      </ol>
 		      <div class="carousel-inner">
 		        <div class="item active">
 
-					<ul class="thumbnails slides">
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-					</ul>
+					<ul class="thumbnails slides" id="stations_block_0"></ul>
 
 		        </div>
 		        <div class="item">
 		          
-					<ul class="thumbnails slides">
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-					</ul>
+					<ul class="thumbnails slides"  id="stations_block_1"></ul>
 
 		        </div>
 		        <div class="item">
 
-					<ul class="thumbnails slides">
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-						<li class="col-xs-2"><a class="_tooltip" href="#" title=""><img alt="#" class="" src="http://placehold.it/90x90"></a></li>
-					</ul>
+					<ul class="thumbnails slides" id="stations_block_2"></ul>
 
 		        </div>
+		        <div class="item">
+
+					<ul class="thumbnails slides"  id="stations_block_3"></ul>
+
+		        </div>
+		        <div class="item">
+
+					<ul class="thumbnails slides"  id="stations_block_4"></ul>
+
+		        </div>		        		        
 		      </div><!-- Carousel inner -->
 
 		      <a class="left carousel-control" href="index.html#myCarousel" data-slide="prev"><span class="glyphicon glyphicon-chevron-left"></span></a>
@@ -430,6 +421,7 @@
     <script type="text/javascript" src="js/audioplayer.js"></script>
 
 	<script type="text/javascript">
+		var player = undefined;
 	    $(document).ready(function() {   
 
 			$('.carousel').carousel(
@@ -442,11 +434,18 @@
 		    // $(activeItem).addClass('active');
 
 		    // Audio player init
-			var player = undefined;
 			player = new AudioPlayer("#jpId");
 	});
 	</script>
 	<!-- Hidden Anchor div for jPlayer -->
 	<div id="jpId"></div>
+
+	<script id="stationblock" type="text/html">
+		<li class="col-xs-2">
+			<a class="_tooltip" href="javascript:void(0);" onclick="return player.tune('{{ id }}');" title="{{ title }}">
+				<img alt="{{ title }}" class="" src="{{ image_url }}">
+			</a>
+		</li>
+	</script>
 </body>
 </html>
