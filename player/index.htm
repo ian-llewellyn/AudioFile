@@ -21,6 +21,7 @@
 	<link href="jquery-ui-1.10.3.custom/css/black-tie/jquery-ui-1.10.3.custom.css" rel="stylesheet">
     <link href="css/bespoke.css" rel="stylesheet">
 
+<link href="skin/blue.monday/jplayer.blue.monday.css" rel="stylesheet" type="text/css" />
 
     <script src="dist/js/jquery.js"></script>
 
@@ -68,6 +69,26 @@
 	});
 	</script>
 
+	<script type="text/javascript">
+//<![CDATA[
+$(document).ready(function(){
+
+	$("#jquery_jplayer_1").jPlayer({
+		ready: function () {
+			$(this).jPlayer("setMedia", {
+				mp3:"http://www.jplayer.org/audio/mp3/TSP-01-Cro_magnon_man.mp3"
+			});
+		},
+		swfPath: "js",
+		supplied: "mp3",
+		wmode: "window",
+		smoothPlayBar: true,
+		keyEnabled: true
+	});
+});
+//]]>
+</script>
+
 
 </head>
 <body id="dates">
@@ -99,8 +120,8 @@
 
 				<div class="row">
 					<div class="col-xs-4">
-					  <span id="station_name">------</span><br />
-					  <span id="playing_status">STOPPED</span><br />
+					  <span id="station_name">RTE Radio 1</span><br />
+					  <span id="playing_status">PLAYING</span><br />
 					  <span id="station_name">LIVE</span><br />
 					  <span id="file_type">MP3<span><br />
 					  <span id="speed">1X</span><br />
@@ -109,7 +130,7 @@
 
 					<div class="col-xs-4 centre">
 					  <h1>08/06/2013</h1>
-					  <h1 class="time" id="play_time">00:00:00</h1>
+					  <h1 class="time jp-current-time">23:41:11</h1>
 					</div>
 
 					<div class="col-xs-4 right">
@@ -117,6 +138,57 @@
 					  <span id="end-point">08/06/2013 - 14:22:11</span>
 					</div>
 				</div><!-- /row -->
+
+				<div id="jquery_jplayer_1" class="jp-jplayer"></div>
+
+				<div id="jp_container_1" class="jp-video">
+					<div class="jp-type-single">
+						<div class="jp-gui jp-interface">
+	
+							<div class="jp-interface">
+								<div class="jp-progress">
+									<div class="jp-seek-bar">
+										<div class="jp-play-bar"></div>
+									</div>
+								</div>
+								<!--<div class="jp-time-holder">
+									<div class="jp-current-time"></div>
+									<div class="jp-duration"></div>
+								</div>
+								<div class="jp-controls-holder">
+									<ul class="jp-controls">
+										<li><a href="javascript:;" class="jp-play" tabindex="1">play</a></li>
+										<li><a href="javascript:;" class="jp-pause" tabindex="1">pause</a></li>
+										<li><a href="javascript:;" class="jp-stop" tabindex="1">stop</a></li>
+										<li><a href="javascript:;" class="jp-mute" tabindex="1" title="mute">mute</a></li>
+										<li><a href="javascript:;" class="jp-unmute" tabindex="1" title="unmute">unmute</a></li>
+										<li><a href="javascript:;" class="jp-volume-max" tabindex="1" title="max volume">max volume</a></li>
+									</ul>
+
+									<div class="jp-volume-bar">
+										<div class="jp-volume-bar-value"></div>
+									</div>
+
+
+									<ul class="jp-toggles">
+										<li><a href="javascript:;" class="jp-repeat" tabindex="1" title="repeat">repeat</a></li>
+										<li><a href="javascript:;" class="jp-repeat-off" tabindex="1" title="repeat off">repeat off</a></li>
+									</ul>
+								</div>-->
+							</div>
+							<!--<div class="jp-title">
+								<ul>
+									<li>Cro Magnon Man</li>
+								</ul>
+							</div>-->
+							<div class="jp-no-solution">
+								<span>Update Required</span>
+								To play the media you will need to either update your browser to a recent version or update your <a href="http://get.adobe.com/flashplayer/" target="_blank">Flash plugin</a>.
+							</div>
+						</div>
+					</div>
+				</div>
+
 
 
 <style>
@@ -192,58 +264,6 @@ button:focus { outline: none !important; }
 
 						  	</div><!-- /col12 -->
 						  </div>
-
-						<!--
-						<div id="jquery_jplayer_1" class="jp-jplayer"></div>
-
-						<div id="jp_container_1" class="jp-video">
-							<div class="jp-type-single">
-								<div class="jp-gui jp-interface">
-			
-									<div class="jp-interface">
-										<div class="jp-progress">
-											<div class="jp-seek-bar">
-												<div class="jp-play-bar"></div>
-											</div>
-										</div>
-										<div class="jp-time-holder">
-											<div class="jp-current-time"></div>
-											<div class="jp-duration"></div>
-										</div>
-										<div class="jp-controls-holder">
-											<ul class="jp-controls">
-												<li><a href="javascript:;" class="jp-play" tabindex="1">play</a></li>
-												<li><a href="javascript:;" class="jp-pause" tabindex="1">pause</a></li>
-												<li><a href="javascript:;" class="jp-stop" tabindex="1">stop</a></li>
-												<li><a href="javascript:;" class="jp-mute" tabindex="1" title="mute">mute</a></li>
-												<li><a href="javascript:;" class="jp-unmute" tabindex="1" title="unmute">unmute</a></li>
-												<li><a href="javascript:;" class="jp-volume-max" tabindex="1" title="max volume">max volume</a></li>
-											</ul>
-
-											<div class="jp-volume-bar">
-												<div class="jp-volume-bar-value"></div>
-											</div>
-
-
-											<ul class="jp-toggles">
-												<li><a href="javascript:;" class="jp-repeat" tabindex="1" title="repeat">repeat</a></li>
-												<li><a href="javascript:;" class="jp-repeat-off" tabindex="1" title="repeat off">repeat off</a></li>
-											</ul>
-										</div>
-									</div>
-									<div class="jp-title">
-										<ul>
-											<li>Cro Magnon Man</li>
-										</ul>
-									</div>
-									<div class="jp-no-solution">
-										<span>Update Required</span>
-										To play the media you will need to either update your browser to a recent version or update your <a href="http://get.adobe.com/flashplayer/" target="_blank">Flash plugin</a>.
-									</div>
-								</div>
-							</div>
-						</div>
-					-->
 
 					</div><!-- /.col 12 jplayer -->
 				</div><!-- /.row -->
@@ -431,7 +451,7 @@ button:focus { outline: none !important; }
 
 	<script id="stationblock" type="text/html">
 		<li class="col-xs-2">
-			<a class="_tooltip" href="javascript:void(0);" onclick="return player.setStation('{{ id }}', '{{ title }}');" title="{{ title }}">
+			<a class="_tooltip" href="javascript:void(0);" onclick="return player.setStation('{{ id }}');" title="{{ title }}">
 				<img alt="{{ title }}" class="" src="{{ image_url }}">
 			</a>
 		</li>
