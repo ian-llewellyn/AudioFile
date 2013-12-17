@@ -120,8 +120,8 @@ $(document).ready(function(){
 
 				<div class="row">
 					<div class="col-xs-4">
-					  <span id="station_name">RTE Radio 1</span><br />
-					  <span id="playing_status">PLAYING</span><br />
+					  <span id="station_name">------</span><br />
+					  <span id="playing_status">STOPPED</span><br />
 					  <span id="station_name">LIVE</span><br />
 					  <span id="file_type">MP3<span><br />
 					  <span id="speed">1X</span><br />
@@ -130,7 +130,7 @@ $(document).ready(function(){
 
 					<div class="col-xs-4 centre">
 					  <h1>08/06/2013</h1>
-					  <h1 class="time jp-current-time">23:41:11</h1>
+					  <h1 class="time" id="play_time">00:00:00</h1>
 					</div>
 
 					<div class="col-xs-4 right">
@@ -451,7 +451,7 @@ button:focus { outline: none !important; }
 
 	<script id="stationblock" type="text/html">
 		<li class="col-xs-2">
-			<a class="_tooltip" href="javascript:void(0);" onclick="return player.setStation('{{ id }}');" title="{{ title }}">
+			<a class="_tooltip" href="javascript:void(0);" onclick="return player.setStation('{{ id }}', '{{ title }}');" title="{{ title }}">
 				<img alt="{{ title }}" class="" src="{{ image_url }}">
 			</a>
 		</li>
