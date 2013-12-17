@@ -125,20 +125,47 @@ AudioPlayer.prototype.getFileUrl = function(format, service, date, file){
     return playerDefaults.downloadUrl + format + "/" + service + "/" + date + "/" + file;
 };
 
-/* Reset the audio player */
+/* 
+    Reset the audio player 
+*/
 AudioPlayer.prototype.reset = function(){
 	if(this.id){
 		$(this.id).jPlayer( "clearMedia" );
 	}
 };
 
-/* Set the media source for the player */
+/* 
+    Set the media source for the player 
+*/
 AudioPlayer.prototype.setMediaSource = function(url){
 	if(this.id){
 		$(this.id).jPlayer( "setMedia", { "mp3": url } );
 	}
 };
 
+/*
+    Press Play
+*/
+AudioPlayer.prototype.play = function() {
+    if( $('.rte-icon-pause-1').length !== 0 )    
+    {
+        $('#playbutton').removeClass('rte-icon-pause-1'); 
+        $('#playbutton').addClass('rte-icon-play-1');      
+        console.log("Pause media.");
+    }
+    else if( $('.rte-icon-play-1').length !== 0 ) 
+    {
+        $('#playbutton').removeClass('rte-icon-play-1'); 
+        $('#playbutton').addClass('rte-icon-pause-1');  
+        console.log("Play media");
+    }
+    else
+    {
+        $('#playbutton').removeClass('rte-icon-play-1');        
+        $('#playbutton').removeClass('rte-icon-pause-1'); 
+        $('#playbutton').addClass('rte-icon-play-1');
+    }
+};
 
 /* 
     Tune the Radio to the selected station.
