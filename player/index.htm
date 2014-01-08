@@ -21,7 +21,7 @@
 	<link href="jquery-ui-1.10.3.custom/css/black-tie/jquery-ui-1.10.3.custom.css" rel="stylesheet">
     <link href="css/bespoke.css" rel="stylesheet">
 
-<link href="skin/blue.monday/jplayer.blue.monday.css" rel="stylesheet" type="text/css" />
+	<link href="skin/blue.monday/jplayer.blue.monday.css" rel="stylesheet" type="text/css" />
 
     <script src="dist/js/jquery.js"></script>
 
@@ -44,31 +44,6 @@
 
 	<!--<script src="jquery-ui-1.10.3.custom/js/jquery-1.9.1.js"></script>-->
 	<script src="jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.js"></script>
-	<script>
-	$(function() {
-		
-		$( "#datepicker" ).datepicker({
-			inline: true,
-			maxDate: 0,
-			firstDay: 1,
-			dateFormat: "yy-mm-dd",
-		    onSelect: function (date) {
-		        player.changeDate(date);
-		    }			
-		});
-		
-		// Hover states on the static widgets
-		$( "#dialog-link, #icons li" ).hover(
-			function() {
-				$( this ).addClass( "ui-state-hover" );
-			},
-			function() {
-				$( this ).removeClass( "ui-state-hover" );
-			}
-		);
-	});
-	</script>
-
 </head>
 <body id="dates">
 
@@ -99,7 +74,7 @@
 
 				<div class="row">
 					<div class="col-xs-4">
-					  <span id="station_name">------</span><br />
+					  <span id="station_name">SELECT STATION</span><br />
 					  <span id="playing_status">STOPPED</span><br />
 					  <span id="station_name">LIVE</span><br />
 					  <span id="file_type">MP3<span><br />
@@ -108,13 +83,13 @@
 					</div>
 
 					<div class="col-xs-4 centre">
-					  <h1>08/06/2013</h1>
+					  <h1 id="play_date">08/06/2013</h1>
 					  <h1 class="time" id="play_time">00:00:00</h1>
 					</div>
 
 					<div class="col-xs-4 right">
-					  <span id="start-point">08/06/2013 - 12:42:2</span><br />
-					  <span id="end-point">08/06/2013 - 14:22:11</span>
+					  <span id="start-point"></span><br />
+					  <span id="end-point"></span>
 					</div>
 				</div><!-- /row -->
 
@@ -150,10 +125,10 @@ button:focus { outline: none !important; }
 						  <div class="row" style="margin:10px 0px 0px 0px">
 						  	<div class="btn-group-back">
 				                <div class="btn-group btn-outline">
-				                  <button class="btn btn-default btn-sm" type="button">30m</button>
-				                  <button class="btn btn-default btn-sm" type="button">5m</button>
-				                  <button class="btn btn-default btn-sm" type="button">30s</button>
-				                  <button class="btn btn-default btn-sm" type="button">5s</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(-1800);">30m</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(-300);">5m</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(-30);">30s</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(-5);">5s</button>
 				                </div>
 						  	</div><!-- /col5 -->
 
@@ -167,10 +142,10 @@ button:focus { outline: none !important; }
 
 						  	<div class="btn-group-forward">
 				                <div class="btn-group btn-outline pull-right">
-				                  <button class="btn btn-default btn-sm" type="button">5s</button>
-				                  <button class="btn btn-default btn-sm" type="button">30s</button>
-				                  <button class="btn btn-default btn-sm" type="button">5m</button>
-				                  <button class="btn btn-default btn-sm" type="button">30m</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(5);">5s</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(30);">30s</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(300);">5m</button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.skip(1800);">30m</button>
 				                </div>
 						  	</div><!-- / -->
 						  </div>
@@ -188,9 +163,13 @@ button:focus { outline: none !important; }
 
 						  <div class="pull-right" style="margin-top:-11px;">
 			                <div class="btn-group">
-			                  <button class="btn btn-default btn-sm" type="button">1x</button>
-			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-tortoise"></span></button>
-			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-hare"></span></button>
+			                  <button class="btn btn-default btn-sm" type="button" onclick="player.setPlaySpeed(1);">1x</button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button" onclick="player.setPlaySpeed(-0.5);">
+			                  	<span class="icon rte-icon-tortoise"></span>
+			                  </button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button" onclick="player.setPlaySpeed(0.5);">
+			                  	<span class="icon rte-icon-hare"></span>
+			                  </button>
 			                </div>
 						  </div>
 
@@ -385,6 +364,28 @@ button:focus { outline: none !important; }
 				pause: true,
 				interval: false
 			});
+
+			$( "#datepicker" ).datepicker({
+				inline: true,
+				maxDate: 0,
+				firstDay: 1,
+				dateFormat: "yy-mm-dd",
+			    onSelect: function (date) {
+			        player.changeDate(date);
+			    }			
+			});
+			
+			// Hover states on the static widgets
+			$( "#dialog-link, #icons li" ).hover(
+				function() {
+					$( this ).addClass( "ui-state-hover" );
+				},
+				function() {
+					$( this ).removeClass( "ui-state-hover" );
+				}
+			);
+
+			$('#two').liteAccordion();
 
 		    // var activeItem = $("#accordion > li:first");
 		    // $(activeItem).addClass('active');

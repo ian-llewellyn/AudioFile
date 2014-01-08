@@ -16,13 +16,15 @@ var playerDefaults = {
 
 /* Track current player state. */
 var playerState = {
-    'station' : 'radio1',
-    'stationName':'RTE Radio 1',
+    'station' : undefined,
+    'stationName': undefined,
     'filename': undefined,
-    'date': moment.utc().format('YYYY-MM-DD'),
+    'date': new Date(),
     'mediaUrl': undefined,
     'playDate': undefined,
-    'state':'STOPPED'
+    'state':'STOPPED',
+    'elapsed': undefined,
+    'playSpeed': 1
 };
 
 /* 
@@ -33,29 +35,19 @@ function AudioPlayer(id){
     this.init();
 }
 
-/* 
-    Init Method 
-*/
-AudioPlayer.prototype.init = function() {
-    
-    this.getServices(); // Load our stations.
-
-    $(this.id).jPlayer( {
-        ready: function () {
-            // Check cookies or url for params.
-        }
-    });
-
-    $(this.id).bind($.jPlayer.event.timeupdate, function(event) { 
-        if(playerState.state == 'PLAYING')
-        {
-            currentTime = Math.floor(event.jPlayer.status.currentTime);
-            var offset = moment(playerState.playDate).add('seconds', currentTime);
-            console.log(offset);
-            $('#play_time').html( moment(offset).format('HH:mm:ss') );
-        }
-    });
-
+/*
+ * Update the time elapsed on the display using the selected hour as an offset.
+ * Event fires every ~250 ms.
+ *
+ */
+AudioPlayer.prototype.updateTimer = function(event){
+    if(playerState.state == 'PLAYING')
+    {
+        var currentTime = Math.floor(event.jPlayer.status.currentTime);
+        playerState.elapsed = currentTime;
+        var offset = moment(playerState.playDate).add('seconds', currentTime);
+        $('#play_time').html( moment(offset).format('HH:mm:ss') );    
+    }
 };
 
 
@@ -187,7 +179,7 @@ AudioPlayer.prototype.setMediaSource = function(url){
 };
 
 /*
-    Press Play
+ * Play / Pause Events when button clicked.
 */
 AudioPlayer.prototype.play = function() {
     if( $('.rte-icon-pause-1').length !== 0 )    
@@ -196,6 +188,7 @@ AudioPlayer.prototype.play = function() {
         $('#playbutton').addClass('rte-icon-play-1');      
         $(player.id).jPlayer('pause');
         $('#playing_status').html('PAUSED');
+        playerState.state = "PAUSED";
     }
     else if( $('.rte-icon-play-1').length !== 0 ) 
     {
@@ -203,12 +196,75 @@ AudioPlayer.prototype.play = function() {
         $('#playbutton').addClass('rte-icon-pause-1');  
         $(player.id).jPlayer('play');
         $('#playing_status').html('PLAYING');
+        playerState.state = "PLAYING";
     }
     else
     {
         $('#playbutton').removeClass('rte-icon-play-1');        
         $('#playbutton').removeClass('rte-icon-pause-1'); 
         $('#playbutton').addClass('rte-icon-play-1');
+    }
+};
+
+/*
+ * Skip forwards/backwards X number of seconds.
+ * If we skip outside the current hour, load and play from that offset.
+ */
+AudioPlayer.prototype.skip = function(seconds){
+    if(playerState.state == "PLAYING")
+    {
+        console.log('Elapsed: ' + playerState.elapsed);
+        console.log('Skip: ' + seconds);
+        console.log( parseInt(playerState.elapsed,10) + parseInt(seconds,10) );
+
+        var newTime = parseInt(playerState.elapsed,10) + parseInt(seconds,10);
+
+        // It would be nice to skip back to the previous hour instead - offset.
+        if(newTime < 0){
+            newTime = 0;
+        }
+
+        // We should skip ahead to next hour + offset.
+        if(newTime >= 3600){
+            newTime = 3600;
+        }
+
+        $(this.id).jPlayer("play", newTime );
+    }
+};
+
+/*
+ * Change play speed by 0.5x steps. 
+ * Range is between 0.5 to 4x 
+ */
+AudioPlayer.prototype.setPlaySpeed = function(speed){
+    
+    var newSpeed = parseFloat(playerState.playSpeed,10) + parseFloat(speed,10);
+    
+    // Reset the speed to 1
+    if( parseFloat(speed,10) == 1)
+    {
+        newSpeed = 1;
+    }
+    else
+    {
+        if(newSpeed >= 4)
+        { 
+            newSpeed = 4; 
+        }
+        
+        if(newSpeed <= 0.5)
+        {
+            newSpeed = 0.5;
+        }
+    }
+
+    console.log(newSpeed);
+    if(playerState.state == "PLAYING")
+    {
+        $(this.id).jPlayer('playbackRate', parseFloat(newSpeed,10));
+        $('#speed').html(newSpeed + 'x');
+        playerState.playSpeed = newSpeed;
     }
 };
 
@@ -226,7 +282,6 @@ AudioPlayer.prototype.setStation = function(stationid, name) {
     $('#station_name').html(playerState.stationName);
 };
 
-
 /* 
     Update the file list for a given date.
 
@@ -236,6 +291,7 @@ AudioPlayer.prototype.changeDate = function(date) {
     if(playerState.station !== undefined)
     {
         playerState.date = date;
+        $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
         this.getFileList(playerState.station, date );
     }
 };
@@ -252,4 +308,24 @@ AudioPlayer.prototype.selectFile = function(filename) {
     playerState.playDate = player.parseFileDate( playerState.filename );
     console.log(moment(playerState.playDate).format('HH:mm:ss'));
     $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );
+};
+
+
+/* 
+    Init Method 
+*/
+AudioPlayer.prototype.init = function() {
+    
+    this.getServices(); // Load our stations.
+
+    $(this.id).jPlayer( {
+        ready: function () {
+            
+        }
+    }).bind($.jPlayer.event.timeupdate, this.updateTimer);
+
+    // Check cookies or url for params.
+
+    // Set the default displayed date to today.
+    $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
 };
