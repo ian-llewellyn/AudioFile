@@ -11,7 +11,8 @@ var playerDefaults = {
     'filelistUrl': 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
     'audioUrl': 'http://audiofile.rte.ie/audio/',
     'stations': undefined,
-    'defaultFormat':'mp3'
+    'defaultFormat':'mp3',
+    'trackLengthDefault': 3600 // Seconds.
 };
 
 /* Track current player state. */
@@ -24,7 +25,12 @@ var playerState = {
     'playDate': undefined,
     'state':'STOPPED',
     'elapsed': undefined,
-    'playSpeed': 1
+    'playSpeed': 1,
+    'volume': 1,
+    'muted': false,
+    'playlist': {},
+    'playlistOffset': 0,
+    'trackend': false
 };
 
 /* 
@@ -34,22 +40,6 @@ function AudioPlayer(id){
 	this.id = id;
     this.init();
 }
-
-/*
- * Update the time elapsed on the display using the selected hour as an offset.
- * Event fires every ~250 ms.
- *
- */
-AudioPlayer.prototype.updateTimer = function(event){
-    if(playerState.state == 'PLAYING')
-    {
-        var currentTime = Math.floor(event.jPlayer.status.currentTime);
-        playerState.elapsed = currentTime;
-        var offset = moment(playerState.playDate).add('seconds', currentTime);
-        $('#play_time').html( moment(offset).format('HH:mm:ss') );    
-    }
-};
-
 
 /*
     Convert filename to data object.
@@ -126,12 +116,14 @@ AudioPlayer.prototype.getFileList = function(service, date){
         contentType: "application/json",
         dataType: 'jsonp',
         success: function(filelist) {
+            playerState.playlist = filelist;
             var listLength = filelist.files.length;
             var fileBlockID = '#filelist';
             $(fileBlockID).empty();
             for( var i = 0; i < listLength;  i++)
             {
                 // Use ICH template to fill a file block.
+                filelist.files[i].playlistOffset = i;
                 $(fileBlockID).append( ich.fileblock( filelist.files[i] ) );
             }
         },
@@ -240,7 +232,7 @@ AudioPlayer.prototype.skip = function(seconds){
 AudioPlayer.prototype.setPlaySpeed = function(speed){
     
     var newSpeed = parseFloat(playerState.playSpeed,10) + parseFloat(speed,10);
-    
+
     // Reset the speed to 1
     if( parseFloat(speed,10) == 1)
     {
@@ -248,6 +240,7 @@ AudioPlayer.prototype.setPlaySpeed = function(speed){
     }
     else
     {
+        // Ensure speed is between 0.5x and 4x
         if(newSpeed >= 4)
         { 
             newSpeed = 4; 
@@ -266,6 +259,57 @@ AudioPlayer.prototype.setPlaySpeed = function(speed){
         $('#speed').html(newSpeed + 'x');
         playerState.playSpeed = newSpeed;
     }
+};
+
+/*
+ * Mute the player if not already muted.
+ */
+AudioPlayer.prototype.toggleMute = function(){
+    if(playerState.muted)
+    {
+        // If we are muted, reset to previous volume.
+        $(this.id).jPlayer('volume', parseFloat( playerState.volume, 10));
+        $('#volume').html( parseInt(playerState.volume * 100, 10) + '%');
+        playerState.muted = false;
+    }
+    else
+    {
+        // Set volume to 0, ie mute.
+        $(this.id).jPlayer('volume', 0);
+        $('#volume').html('MUTE');
+        playerState.muted = true;
+    }
+};
+
+/*
+ * Change playback volume by 0.1 steps between 0 - 1.
+ * Set the volume level on the display as a percentage.  
+ */
+AudioPlayer.prototype.adjustVolume = function(value){
+    
+    // Touching volume cancels mute.
+    if(playerState.muted)
+    {
+        this.toggleMute();
+    }
+
+    var newVolume = parseFloat(playerState.volume,10) + parseFloat(value,10);
+    
+    if(newVolume >= 1)
+    { 
+        newVolume = 1; 
+    }
+    
+    if(newVolume <= 0)
+    {
+        newVolume = 0;
+    }
+    
+    $(this.id).jPlayer('volume', parseFloat(newVolume,10));
+
+    $('#volume').html( parseInt(newVolume * 100, 10) + '%');
+    playerState.volume = newVolume;
+    
 };
 
 /* 
@@ -300,7 +344,8 @@ AudioPlayer.prototype.changeDate = function(date) {
 /*
     Load a file from the file list as the currently selected media. 
 */
-AudioPlayer.prototype.selectFile = function(filename) {
+AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
+    playerState.playlistOffset = playlistOffset;
     playerState.filename = filename;
     playerState.mediaUrl = this.getFileUrl( playerDefaults.defaultFormat, playerState.station, playerState.date, filename);
     this.setMediaSource(playerState.mediaUrl);
@@ -310,19 +355,71 @@ AudioPlayer.prototype.selectFile = function(filename) {
     $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );
 };
 
+/*
+    When a file finishs playing we need to advance to the next in our play list.
+*/
+AudioPlayer.prototype.advancePlaylist = function(playerObj){
+
+    // Should be between 0 and max elements in playlist.
+    // More than 24 means we need to advance a day.
+    if(playerState.playlistOffset < playerState.playlist.files.length)
+    {
+        var filename = playerState.playlist.files[ playerState.playlistOffset + 1 ].file;
+        console.log(filename);
+        playerObj.selectFile(filename, playerState.playlistOffset + 1 );
+        $(playerObj.id).jPlayer('play');
+    }
+    else
+    {
+        // Next Day.
+        console.log('Next day');
+    }
+};
+
+/*
+ * Update the time elapsed on the display using the selected hour as an offset.
+ * Event fires every ~250 ms.
+ *
+ */
+AudioPlayer.prototype.updateTimer = function(event, player){
+    if(playerState.state == 'PLAYING')
+    {
+        var currentTime = Math.floor(event.jPlayer.status.currentTime);
+        playerState.elapsed = currentTime;
+        var offset = moment(playerState.playDate).add('seconds', currentTime);
+        $('#play_time').html( moment(offset).format('HH:mm:ss') );   
+
+        // if(event.jPlayer.status.currentTime >= playerDefaults.trackLengthDefault - 1) 
+        // {
+        //     if(!playerState.trackend)
+        //     {
+        //         console.log("Track end.");
+        //         player.advancePlaylist();
+        //         playerState.trackend = true;
+        //     }
+        // } 
+    }
+};
 
 /* 
     Init Method 
 */
 AudioPlayer.prototype.init = function() {
     
+    var playerObj = this;
     this.getServices(); // Load our stations.
 
     $(this.id).jPlayer( {
         ready: function () {
             
         }
-    }).bind($.jPlayer.event.timeupdate, this.updateTimer);
+    })
+    .bind($.jPlayer.event.timeupdate, function(e){ playerObj.updateTimer(e, playerObj);      } )
+    .bind($.jPlayer.event.seeking,    function(e){ $('#playing_status').html('BUFFERING..'); } )
+    .bind($.jPlayer.event.seeked,     function(e){ $('#playing_status').html('PLAYING');     } )
+    .bind($.jPlayer.event.error,      function(e){ console.log(e);                           } )
+    .bind($.jPlayer.event.ended,      function(e){ playerObj.advancePlaylist(playerObj);     } )
+    
 
     // Check cookies or url for params.
 

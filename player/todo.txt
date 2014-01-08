@@ -1,0 +1,31 @@
+# To Do #
+
+[x] Show todays date onload
+
+[x] Get counter working with correct offset.
+
+[/] Get Skip back/forward buttons working
+	[ ] Ensure that skip forwards/backwards will change dates.
+
+[x] Get play speed buttons working
+	[x]	Reflect play speed in display
+
+[x] Get volume buttons working
+	[x] Reflect volume level in display
+
+[/] Playlist support
+	[x] When we reach the end of the hour, ensure play continues to next hour.
+	[ ] When reaching the 24 hour mark, ensure switch to next day.
+
+[ ] File Download
+	[ ] Get mark start working
+	[ ] Get mark end working
+	[ ] Get Download button working using start and end.
+	[ ] Reset if they change station.
+	[ ] Hide mark start/end datetimestamps unless activated.
+
+[ ] Implement Cookie playback setting
+
+[ ] Implement parameter based player back.
+
+[ ] Test Daylight savings dates

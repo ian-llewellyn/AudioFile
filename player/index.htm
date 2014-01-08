@@ -79,7 +79,7 @@
 					  <span id="station_name">LIVE</span><br />
 					  <span id="file_type">MP3<span><br />
 					  <span id="speed">1X</span><br />
-					  <span id="percentage">83%</span><br />
+					  <span id="volume">100%</span><br />
 					</div>
 
 					<div class="col-xs-4 centre">
@@ -155,9 +155,15 @@ button:focus { outline: none !important; }
 
 						  <div class="pull-left">
 			                <div class="btn-group" style="margin-top:-11px;">
-			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-off-volume-2"></span></button>
-			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-down-volume-2"></span></button>
-			                  <button class="btn btn-default btn-sm btn-icon" type="button"><span class="icon rte-icon-up-volume-2"></span></button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button" onclick="player.toggleMute();">
+			                  	<span class="icon rte-icon-off-volume-2"></span>
+			                  </button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button" onclick="player.adjustVolume(-0.1);">
+			                  	<span class="icon rte-icon-down-volume-2"></span>
+			                  </button>
+			                  <button class="btn btn-default btn-sm btn-icon" type="button" onclick="player.adjustVolume(0.1);">
+			                  	<span class="icon rte-icon-up-volume-2"></span>
+			                  </button>
 			                </div>
 						  </div>
 
@@ -407,7 +413,7 @@ button:focus { outline: none !important; }
 
 	<script id="fileblock" type="text/html">
 		<li>
-			<a href="javascript:void(0);" onclick="player.selectFile('{{ file }}');">{{ title }}</a>
+			<a href="javascript:void(0);" onclick="player.selectFile('{{ file }}', {{ playlistOffset }});">{{ title }}</a>
 		</li>
 	</script>
 </body>
