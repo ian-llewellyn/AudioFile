@@ -28,4 +28,10 @@
 
 [ ] Implement parameter based player back.
 
+[ ] UI Improvements
+	[ ] Selecting an hour in the list should auto play that hour.
+
 [ ] Test Daylight savings dates
+
+[ ] Support changing station but resuming at same time/position.
+
