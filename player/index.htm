@@ -185,12 +185,18 @@ button:focus { outline: none !important; }
 						  	<div class="col-xs-12">
 
 				                <div class="btn-group">
-				                  <button  class="btn btn-default btn-sm" type="button">Mark Start <span class="icon rte-icon-mark-start-1"></span></button>
-				                  <button class="btn btn-default btn-sm" type="button">Mark End <span class="icon rte-icon-mark-end"></span></button>
+				                  <button  class="btn btn-default btn-sm" type="button" onclick="player.mark('start');">
+				                  	Mark Start <span class="icon rte-icon-mark-start-1"></span>
+				                  </button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="player.mark('end');">
+				                  	Mark End <span class="icon rte-icon-mark-end"></span>
+				                  </button>
 				                </div>
 
 				                <div class="btn-group pull-right">
-				               		<button class="btn btn-default btn-sm" type="button">Download <span class="icon rte-icon-fontawesome-webfont"></span></button>
+				               		<button class="btn btn-default btn-sm" type="button" onclick="player.download();">
+				               			Download <span class="icon rte-icon-fontawesome-webfont"></span>
+				               		</button>
 				               	</div>
 
 
@@ -398,6 +404,9 @@ button:focus { outline: none !important; }
 
 		    // Audio player init
 			player = new AudioPlayer("#jpId");
+			if(player === undefined){
+				alert("Could not initialise Audio Player. Please either reload this page or try again later.");
+			}
 	});
 	</script>
 	<!-- Hidden Anchor div for jPlayer -->

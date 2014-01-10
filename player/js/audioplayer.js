@@ -29,7 +29,9 @@ var playerState = {
     'volume': 1,
     'muted': false,
     'playlist': {},
-    'playlistOffset': 0
+    'playlistOffset': 0,
+    'markstart': undefined,
+    'markend': undefined
 };
 
 /* 
@@ -39,6 +41,71 @@ function AudioPlayer(id){
 	this.id = id;
     this.init();
 }
+
+/*
+    Mark the current player time for clip download.
+    - position can either be 'start' or 'end' 
+*/
+AudioPlayer.prototype.mark = function(position){
+    var time = moment(playerState.playDate).add('seconds', playerState.elapsed).toDate();
+    var formatted = moment(time).format('HH:mm:ss DD/MM/YYYY');
+    if(position == 'start')
+    {
+        if( playerState.markend !== undefined && moment(playerState.markend).isBefore( time ) )
+        {
+            alert("Start position must be before end mark.");
+        }
+        else
+        {
+            playerState.markstart = time;
+            $('#start-point').html('Start: ' + formatted);
+        }
+    }
+    else if(position == 'end')
+    {
+        if(playerState.markstart == undefined || moment(playerState.markstart).isAfter( time ) )
+        {
+            alert("Start position must be before end mark.");
+        }
+        else
+        {
+            playerState.markend = time;
+            $('#end-point').html('End: ' + formatted);
+        }
+    }
+};
+
+
+/*
+    Download an audio file with given start and end times.
+*/
+AudioPlayer.prototype.download = function(){
+    if(playerState.markstart === undefined || playerState.markend === undefined)
+    {
+        alert("Please mark the start and end positions of the required clip first.");
+    }
+    else if( moment(playerState.markstart).isAfter( playerState.markend ) )
+    {
+        // Should never happen.
+        alert("End position cannot be before start.");
+        playerState.markstart = undefined;
+        playerState.markend = undefined;
+        $('#start-point').empty();
+        $('#end-point').empty();
+    }
+    else if( moment(playerState.markstart).isBefore( playerState.markend ) )
+    {
+        // Download.
+        console.log("Download");
+
+        // Should we remove markers after download clicked?
+        playerState.markstart = undefined;
+        playerState.markend = undefined;
+        $('#start-point').empty();
+        $('#end-point').empty();
+    }
+
+};
 
 /*
     Convert filename to data object.

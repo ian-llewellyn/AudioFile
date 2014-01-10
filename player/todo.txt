@@ -17,21 +17,21 @@
 	[x] When we reach the end of the hour, ensure play continues to next hour.
 	[x] When reaching the 24 hour mark, ensure switch to next day.
 
-[ ] File Download
-	[ ] Get mark start working
-	[ ] Get mark end working
+[/] File Download
+	[x] Get mark start working
+	[x] Get mark end working
 	[ ] Get Download button working using start and end.
 	[ ] Reset if they change station.
-	[ ] Hide mark start/end datetimestamps unless activated.
+	[x] Hide mark start/end datetimestamps unless activated.
 
 [ ] Implement Cookie playback setting
 
 [ ] Implement parameter based player back.
 
-[ ] UI Improvements
-	[ ] Selecting an hour in the list should auto play that hour.
+[/] UI Improvements
+	[x] Selecting an hour in the list should auto play that hour.
 
 [ ] Test Daylight savings dates
 
-[ ] Support changing station but resuming at same time/position.
+[x] Support changing station but resuming at same time/position.
 
