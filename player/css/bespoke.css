@@ -326,6 +326,11 @@ color: #fff;
   color:white;
 }
 
+.navactive{
+  background-color: #2E3338;
+  color:white;  
+}
+
 /* CUSTOMIZE THE CAROUSEL
 -------------------------------------------------- */
 

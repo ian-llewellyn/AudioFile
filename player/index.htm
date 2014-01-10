@@ -412,7 +412,7 @@ button:focus { outline: none !important; }
 	</script>
 
 	<script id="fileblock" type="text/html">
-		<li>
+		<li id="hourblock_{{ playlistOffset }}" class="hourblocks">
 			<a href="javascript:void(0);" onclick="player.selectFile('{{ file }}', {{ playlistOffset }});">{{ title }}</a>
 		</li>
 	</script>

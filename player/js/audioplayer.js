@@ -97,10 +97,10 @@ AudioPlayer.prototype.getServices = function() {
     - date accepted in YYYY-MM-DD string or Date object format.
 
     - autoplay: Automatically play first file in the returned list.
-    - returns file list object.
+        - fileOffset: If using autoplay, which file should we autoplay
+        - skip: If using autoplay, skip X seconds ahead. 
 */
-AudioPlayer.prototype.getFileList = function(service, date, autoplay){
-
+AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset, skip){
     if(service === undefined || service.length === 0){ service = 'radio1' }
     if(date === undefined || date == ''){ date = new Date(); }
 
@@ -110,7 +110,7 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay){
     }
 
     var requestUrl = playerDefaults.filelistUrl + "?service=" + service + "&date=" + date;
-
+    var playerObj = this;
     $.ajax({
        type: 'GET',
         url: requestUrl,
@@ -125,8 +125,8 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay){
 
             // Handle autoplay function (need one file or more.)
             if(autoplay && ( listLength >= 1) ){
-                this.selectFile(filelist.files[1].file, 1);
-                $(this.id).jPlayer('play');
+                playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset);
+                $(playerObj.id).jPlayer('play', skip);
             }
 
             for( var i = 0; i < listLength;  i++)
@@ -199,7 +199,7 @@ AudioPlayer.prototype.play = function() {
         $('#playbutton').removeClass('rte-icon-pause-1'); 
         $('#playbutton').addClass('rte-icon-play-1');
     }
-};
+};      
 
 /*
  * Skip forwards/backwards X number of seconds.
@@ -322,11 +322,24 @@ AudioPlayer.prototype.adjustVolume = function(value){
     - Otherwise grab the files for selected date. 
 */
 AudioPlayer.prototype.setStation = function(stationid, name) {
-    var calendarDate = $( "#datepicker" ).datepicker( "getDate" );
-    playerState.station = stationid;
-    playerState.stationName = name;
-    this.getFileList(stationid, calendarDate, false );
-    $('#station_name').html(playerState.stationName);
+    if(stationid != playerState.station || playerState.station == undefined)
+    {
+        var calendarDate = $( "#datepicker" ).datepicker( "getDate" );
+        playerState.station = stationid;
+        playerState.stationName = name;
+
+        // We need to be able to switch stations while continuing from the same point in time.
+        if(playerState.state == 'PLAYING')
+        {
+            this.getFileList(stationid, calendarDate, true, playerState.playlistOffset, playerState.elapsed);
+        }
+        else
+        {
+            this.getFileList(stationid, calendarDate, false, false, false);
+        }
+
+        $('#station_name').html(playerState.stationName);
+    }
 };
 
 /* 
@@ -343,7 +356,7 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
 
     if(playerState.station !== undefined)
     {
-        this.getFileList(playerState.station, date, autoplay );
+        this.getFileList(playerState.station, date, autoplay, 0, 0 );
     }
 };
 
@@ -359,6 +372,10 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
     playerState.playDate = player.parseFileDate( playerState.filename );
     $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );
     $(this.id).jPlayer('play');
+
+    // Highlight selected hour.
+    $('.hourblocks').removeClass('navactive');
+    $('#hourblock_' + playlistOffset).addClass('navactive');
 };
 
 /*
@@ -366,16 +383,16 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
     Offset lets us start the next or previous day with a given offset.
 */
 AudioPlayer.prototype.advancePlaylist = function(playerObj, offset){
-
     var startTime = parseInt(playerState.elapsed,10) + parseInt(offset,10);
     playerState.playlistOffset = playerState.playlistOffset + 1;
+    var nextDay = moment(playerState.playDate).add('days', 1);
 
     // Should be between 0 and max elements in playlist.
     // More than 24 means we need to advance a day.
     if(playerState.playlistOffset < 24)
     {
-        var filename = playerState.playlist.files[ playerState.playlistOffset + 1 ].file;
-        playerObj.selectFile(filename, playerState.playlistOffset + 1 );
+        var filename = playerState.playlist.files[ playerState.playlistOffset].file;
+        playerObj.selectFile(filename, playerState.playlistOffset);
         if(playerState.state != 'PLAYING')
         {
             $(playerObj.id).jPlayer('play', startTime);
@@ -386,10 +403,28 @@ AudioPlayer.prototype.advancePlaylist = function(playerObj, offset){
         /***** HERE BE DRAGONS *****/
         // We need to advance to the next day but we also need to be sure that
         // DST doesn't screw us over. Need to come back and test this. 
-        console.log('Next day');
-        var nextDay = moment(playerState.playDate).add('days', 1);
-        $("#datepicker").datepicker("setDate", moment(nextDay).format('DD/MM/YYYY') );
-        this.changeDate( moment(nextDay).toDate(), true );
+        if( moment(nextDay).isSame( new Date(), 'day' ) )
+        {
+            // If the next day is today, play the previous file. 
+            var filename = playerState.playlist.files[ playerState.playlistOffset - 1].file;
+            playerObj.selectFile(filename, playerState.playlistOffset - 1);
+            if(playerState.state != 'PLAYING')
+            {
+                $(playerObj.id).jPlayer('play', startTime);
+            }
+
+        }
+        else if( moment(nextDay).isAfter( new Date(), 'day' ) )
+        {
+            // If the next day is after today.
+            alert("No further programs are available.");
+        }
+        else
+        {
+            // Otherwise advance to the next day.
+            $("#datepicker").datepicker("setDate", moment(nextDay).format('DD/MM/YYYY') );
+            this.changeDate( moment(nextDay).toDate(), true );
+        }
 
     }
 };
@@ -424,6 +459,7 @@ AudioPlayer.prototype.init = function() {
     .bind($.jPlayer.event.timeupdate, function(e){ playerObj.updateTimer(e, playerObj);      } )
     .bind($.jPlayer.event.seeking,    function(e){ $('#playing_status').html('BUFFERING..'); } )
     .bind($.jPlayer.event.seeked,     function(e){ $('#playing_status').html('PLAYING');     } )
+    .bind($.jPlayer.event.stalled,    function(e){ $('#playing_status').html('BUFFERING.'); } )
     .bind($.jPlayer.event.play,       function(e){ 
         
         $('#playing_status').html('PLAYING');
@@ -439,9 +475,18 @@ AudioPlayer.prototype.init = function() {
         playerState.state = "PAUSED"; 
 
     })
-    .bind($.jPlayer.event.ended,      function(e){ playerObj.advancePlaylist(playerObj,0);     } )
+    .bind($.jPlayer.event.ended,      function(e){ 
+        playerState.elapsed = 0;
+        playerObj.advancePlaylist(playerObj,0);     
+
+    })
     .bind($.jPlayer.event.error + ".AudioPlayer", function(event) 
     { 
+        if( event.jPlayer.error.type == 'e_url')
+        {
+            alert("This program is currently unavailable.");
+            playerObj.advancePlaylist(playerObj, 0); 
+        }
         console.log("Error Event: type = " + event.jPlayer.error.type); 
     });
 
