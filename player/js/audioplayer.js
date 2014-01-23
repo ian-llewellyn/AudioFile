@@ -4,6 +4,15 @@
  * 
  *****************************************************/
 
+/* Get a named parameter that may have been passed in the URL string */
+function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results == null ? undefined : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+
 /* Defaults that the player will use. */
 var playerDefaults = {
 	'startTrack': 'audio/sweet_dreams.mp3',
@@ -12,7 +21,8 @@ var playerDefaults = {
     'audioUrl': 'http://audiofile.rte.ie/audio/',
     'stations': undefined,
     'defaultFormat':'mp3',
-    'trackLengthDefault': 3600 // Seconds.
+    'trackLengthDefault': 3600, // Seconds.
+    'preload': undefined
 };
 
 /* Track current player state. */
@@ -31,7 +41,8 @@ var playerState = {
     'playlist': {},
     'playlistOffset': 0,
     'markstart': undefined,
-    'markend': undefined
+    'markend': undefined,
+    'callbacks':undefined
 };
 
 /* 
@@ -41,6 +52,60 @@ function AudioPlayer(id){
 	this.id = id;
     this.init();
 }
+
+/*
+    Load Params from URL string if available
+    - Return false if no valid params can be parse.
+    - Return object with at least a valid stationid and start timestamp.
+      stop timestamp is undefined if unavailable or could not be parsed.
+*/
+AudioPlayer.prototype.checkParams = function(){
+
+    // We need these three to play
+    var start   = getParameterByName('start');
+    var service = getParameterByName('service');
+    var stop    = getParameterByName('stop');
+
+    if(start !== undefined && service !== undefined){
+
+        // Valid start timestamp (required field)
+        var parsedStart = moment(start, "YYYY-MM-DD-HH-mm-ss", true).isValid();
+        if(!parsedStart){   return false;   }
+        parsedStart = moment(start, "YYYY-MM-DD-HH-mm-ss").toDate();
+        
+        // If start date is in the future (ie greater than new Date())
+        if( moment.utc(parsedStart).isAfter( new Date() ) ){
+            alert("Parameter start is greater than current time.");
+            return false;
+        }
+        
+        // Parse stop timestamp if valid. Leave undefined otherwise as it is not strictly needed. 
+        var parsedStop = moment(stop, "YYYY-MM-DD-HH-mm-ss", true).isValid();
+        if(!parsedStop){    
+            parsedStop = undefined;
+        }
+        else{
+            parsedStop = moment(stop, "YYYY-MM-DD-HH-mm-ss").toDate();
+        }
+
+        // Found station.
+        return { 
+            'stationid' : service,
+            'start'     : parsedStart,
+            'stop'      : parsedStop
+        };
+    }
+    else{
+        return false;
+    }
+};
+
+/*
+    Play an audio clip specified by params
+*/
+AudioPlayer.prototype.playClip = function(start, end, stationId, date){
+
+};
 
 /*
     Mark the current player time for clip download.
@@ -128,7 +193,7 @@ AudioPlayer.prototype.getServices = function() {
         contentType: "application/json",
         dataType: 'jsonp',
         success: function(stations) {
-            this.stations = stations;
+            playerDefaults.stations = stations;
             var serviceLength = stations.services.length;
             var carouselLength = 5; // 5 slides
             var carouselSlots = 6; // 6 slots in each slide
@@ -146,8 +211,8 @@ AudioPlayer.prototype.getServices = function() {
                 // Use ICH template to fill a station block.
                 $(blockPrefix + slotTemp).append( ich.stationblock( stations.services[i] ) );
             }
-
-            playerObj.setStation('radio1','RTÉ Radio 1 FM'); // RTE Radio 1 is our default. 
+            playerObj.setStation('radio1','RTÉ Radio 1 FM'); // RTE Radio 1 is our default.  
+            playerState.callbacks.fire('stationsLoaded', playerObj);
         },
         error: function(e) {
            console.log(e.message);
@@ -202,6 +267,7 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
                 filelist.files[i].playlistOffset = i;
                 $(fileBlockID).append( ich.fileblock( filelist.files[i] ) );
             }
+            playerState.callbacks.fire('filesLoaded', playerObj);
         },
         error: function(e) {
            console.log(e.message);
@@ -322,7 +388,6 @@ AudioPlayer.prototype.setPlaySpeed = function(speed){
         }
     }
 
-    console.log(newSpeed);
     if(playerState.state == "PLAYING")
     {
         $(this.id).jPlayer('playbackRate', parseFloat(newSpeed,10));
@@ -511,12 +576,68 @@ AudioPlayer.prototype.updateTimer = function(event, player){
     }
 };
 
+
+
 /* 
     Init Method 
 */
 AudioPlayer.prototype.init = function() {
-    
     var playerObj = this;
+    playerState.callbacks = $.Callbacks();
+
+    /* Check for params that we can use to init the player */
+    var preload = this.checkParams();
+    if(preload){
+        playerState.preload = preload;
+        console.log('preload');
+
+        playerState.station = preload.stationid;
+        playerState.date = preload.start;
+        playerState.playDate = preload.start;
+
+        $('#play_date').html( moment.utc( preload.start ).format('DD/MM/YYYY') ); 
+
+        $("#datepicker").datepicker("setDate", moment.utc(playerState.preload.start).toDate() );
+        playerState.markstart = preload.start;
+        $('#start-point').html('Start: ' + moment(preload.start).format('HH:mm:ss DD/MM/YYYY') );
+
+        if(preload.stop !== undefined){
+        playerState.markend = preload.end;
+            $('#end-point').html('End: ' + moment(preload.stop).format('HH:mm:ss DD/MM/YYYY') );
+        }
+
+        var onLoadPlay = function(event,playerObj){
+            console.log(event);
+            if(event == "stationsLoaded"){
+                /*
+                    Assuming that the file array remains in index == hour order.
+                    TODO: Test this works with UTC and DST
+                */
+                var stationArray = playerDefaults.stations.services;
+                for(var i = 0; i < stationArray.length; i++){
+
+                    if(stationArray[i].id == preload.stationid){
+                        playerState.stationName = stationArray[i].title;
+                        $('#station_name').html(playerState.stationName);
+                        break;
+                    }
+                }
+
+                var fileOffset  = moment.utc(playerState.preload.start).hour();
+                var minutes     = moment.utc(playerState.preload.start).minute();
+                var seconds     = moment.utc(playerState.preload.start).second();
+                var skip        = seconds + (minutes * 60);
+                playerObj.getFileList(preload.stationid, preload.start, true, fileOffset, skip);
+            }            
+            if(event == "filesLoaded"){
+                console.log("filesLoaded event");
+                playerState.callbacks.remove(this);
+            }
+        };
+
+        playerState.callbacks.add(onLoadPlay);
+    } 
+
     this.getServices(); // Load our stations.
     $(this.id).jPlayer( {
         ready: function () {
@@ -556,8 +677,6 @@ AudioPlayer.prototype.init = function() {
         }
         console.log("Error Event: type = " + event.jPlayer.error.type); 
     });
-
-    // Check cookies or url for params.
 
     // Set the default displayed date to today.
     $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
