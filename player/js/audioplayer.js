@@ -42,7 +42,8 @@ var playerState = {
     'playlistOffset': 0,
     'markstart': undefined,
     'markend': undefined,
-    'callbacks':undefined
+    'callbacks':undefined,
+    'clipMode':false
 };
 
 /* 
@@ -72,7 +73,7 @@ AudioPlayer.prototype.checkParams = function(){
         var parsedStart = moment(start, "YYYY-MM-DD-HH-mm-ss", true).isValid();
         if(!parsedStart){   return false;   }
         parsedStart = moment(start, "YYYY-MM-DD-HH-mm-ss").toDate();
-        
+
         // If start date is in the future (ie greater than new Date())
         if( moment.utc(parsedStart).isAfter( new Date() ) ){
             alert("Parameter start is greater than current time.");
@@ -566,13 +567,27 @@ AudioPlayer.prototype.advancePlaylist = function(playerObj, offset){
  * Event fires every ~250 ms.
  *
  */
-AudioPlayer.prototype.updateTimer = function(event, player){
+AudioPlayer.prototype.updateTimer = function(event, playerObj){
     if(playerState.state == 'PLAYING')
     {
         var currentTime = Math.floor(event.jPlayer.status.currentTime);
         playerState.elapsed = currentTime;
         var offset = moment(playerState.playDate).add('seconds', currentTime);
         $('#play_time').html( moment(offset).format('HH:mm:ss') );   
+
+        // Have we reached auto stop time with clipmode set?
+        // Stopping exactly on the mark would be nice but there is no telling when 
+        // we will fire.
+        // By saying after we will be at most 1/4 of a second over the mark. 
+        var stopOffset = moment(playerState.playDate).add('seconds', currentTime + 1);
+        if( playerState.clipMode && moment( stopOffset ).isAfter( playerState.preload.stop ) )
+        {
+            $(playerObj.id).jPlayer('stop');
+            $('#playing_status').html('STOPPED');
+            $('#playbutton').removeClass('rte-icon-play-1'); 
+            $('#playbutton').addClass('rte-icon-pause-1'); 
+            playerState.state = "STOPPED";            
+        }
     }
 };
 
@@ -628,6 +643,7 @@ AudioPlayer.prototype.init = function() {
                 var seconds     = moment.utc(playerState.preload.start).second();
                 var skip        = seconds + (minutes * 60);
                 playerObj.getFileList(preload.stationid, preload.start, true, fileOffset, skip);
+                playerState.clipMode = true;
             }            
             if(event == "filesLoaded"){
                 console.log("filesLoaded event");
@@ -650,9 +666,13 @@ AudioPlayer.prototype.init = function() {
     .bind($.jPlayer.event.stalled,    function(e){ $('#playing_status').html('BUFFERING.'); } )
     .bind($.jPlayer.event.play,       function(e){ 
         
-        $('#playing_status').html('PLAYING');
         $('#playbutton').removeClass('rte-icon-play-1'); 
         $('#playbutton').addClass('rte-icon-pause-1'); 
+        if(playerState.clipMode){
+            $('#playing_status').html('PLAYING CLIP');
+        }else{
+            $('#playing_status').html('PLAYING');
+        }
         playerState.state = "PLAYING";
     })
     .bind($.jPlayer.event.pause,      function(e){ 
