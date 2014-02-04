@@ -2,29 +2,34 @@
 # -*- coding: utf-8 -*-
 """
 Usage:
-  af_sync_multi.py [OPTIONS] [-d <date>]
-  af_sync_multi.py (start|restart) [OPTIONS] [-d <date>]
-  af_sync_multi.py (stop|status|reload) [OPTIONS]
+  af_sync_multi.py [start|restart] [options]
+  af_sync_multi.py [stop|reload|status|fullstatus] [-c <config_file>] [-p <params_file>]
 
   Options:
+    -d, --date=<date>           Only process files on this date (Format: YYYY-mm-dd).
     -c, --config=<config_file>  The multi instance configuration file to load.
+                                [default: af-sync-multi.conf]
     -p, --params=<params_file>  The parameters file to load.
+                                [default: af-sync.conf]
     -n, --noop                  Skip file operations.
 """
 __version__ = '0.2'
 
+import logging, os
+
 # DEFAULTS
-DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
+#DEFAULT_MULTI_INSTANCE_CONFIG_FILE = '/etc/af-sync.d/af-sync-multi.conf'
+#DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
+#DEFAULT_MAIN_LOOP_MIN_TIME = 750
 DEFAULT_LOG_PATH = '/var/log/audiofile'
-DEFAULT_LOG_LEVEL = 'INFO'
-DEFAULT_MULTI_INSTANCE_CONFIG_FILE = '/etc/af-sync.d/af-sync-multi.conf'
+DEFAULT_LOG_LEVEL = logging.INFO
 DEFAULT_CONTROL_PORT = 1111
-DEFAULT_MAIN_LOOP_MIN_TIME = 750
 
-import logging
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('af-sync')
+logger.addHandler(logging.StreamHandler())
+logger.level = logging.DEBUG
 
-from af_sync_single import AFSingle, load_params
+from af_sync_single import AFSingle, load_params, DEFAULT_MAIN_LOOP_MIN_TIME
 import socket, thread
 
 class ConfigItem(dict):
@@ -73,11 +78,13 @@ class Configuration(set):
             for line in config_fp.readlines():
                 line = line.rstrip()
                 if line == '':
+                    # Blank line
                     continue
                 if line.startswith('#'):
+                    # Comment line
                     continue
                 host, svc_format, map_file = (line + ' ').split(' ', 2)
-                map_file = map_file or None
+                map_file = map_file.rstrip() or None
                 formats, service = svc_format.split(':')
                 if formats == '*':
                     formats = ['mp2', 'mp3']
@@ -94,6 +101,7 @@ class AFMulti(set):
     The AFMulti class is a simple set used as a manager for the single
     instances it contains.
     """
+
     def __init__(self, multi_config, params=None):
         """
         Standard constructor method.
@@ -115,21 +123,30 @@ class AFMulti(set):
         super(AFMulti, self).add(single_instance)
 
     def stop(self):
+        global running
         running = False
-        return (0, 'Terminating on next loop.')
+        return (os.EX_OK, 'Terminating on next loop.')
 
     def restart(self):
-        return (0, '')
+        return (os.EX_OK, 'restart') # os.EX_CONFIG, os.EX_NOHOST
 
     def reload(self):
-        return (0, '')
+        return (os.EX_OK, 'reload') # os.EX_CONFIG
 
     def status(self):
-        return (0, '')
+        return (os.EX_OK, 'status') # 1 = reload required
 
     def fullstatus(self):
-        return (0, '')
-
+        output = ''
+        for single_instance in self:
+            for key in ['host', 'service', 'format', 'date', 'map_file',
+                '_target_fp', '_next_run_time', '_delta_failures',
+                '_no_progress_sleep_time']:
+                output += key + ': ' + str(getattr(single_instance, key)) + ', '
+            output = output.rstrip(' ,')
+            output += "\n"
+        output = output.rstrip("\n")
+        return (os.EX_OK, output)
 
 class AFMultiServer(object):
     """
@@ -149,8 +166,7 @@ class AFMultiServer(object):
         try:
             self.connect()
         except socket.error, error:
-            logger.error('An error occurred when connect()ing the server: %s',
-                         error)
+            logger.error('An error occurred when bind()ing: %s', error)
             raise
 
     def connect(self):
@@ -167,20 +183,23 @@ class AFMultiServer(object):
         """
         self.socket.listen(0)
         while running:
-            connection, address = self.socket.accept()
+            (connection, address) = self.socket.accept()
             command = connection.recv(1024)
-            connection.shutdown(socket.SHUT_RD)
+            #connection.shutdown(socket.SHUT_RD) # The client shuts down the
+                                                 # writing end of the pipe.
             try:
                 code, output = getattr(multi, command)()
             except AttributeError:
                 code = 64
-                output = 'Command not implemented'
+                output = 'AttributeError: Command not implemented'
             except TypeError:
                 code = 64
-                output = 'Command not implemented'
+                output = 'TypeError: Command not implemented'
             connection.send(','.join([str(code), str(len(output)), output]))
+
             connection.shutdown(socket.SHUT_WR)
-            connection.close()
+            #connection.close() # Allow the client call the close() function
+                                # so that TIME_WAIT is on the client side.
 
 class AFMultiClient(object):
     """
@@ -192,11 +211,11 @@ class AFMultiClient(object):
         Sets up the AFMultiClient instance and connects to the
         configured AFMulti instance.
         """
+        super(AFMultiClient, self).__init__()
         self.control_port = params['control_port'] or DEFAULT_CONTROL_PORT
         self.socket = None
         if connect:
             self.connect()
-        super(AFMultiClient, self).__init__()
 
     def communicate(self, message):
         """
@@ -215,9 +234,9 @@ class AFMultiClient(object):
         while len(output) != length:
             output += self.socket.recv(1024)
 
-        self.socket.shutdown(socket.SHUT_RD)
+        #self.socket.shutdown(socket.SHUT_RD) # Allowing the server shut down
+                                              # the write end of the pipe.
 
-        self.disconnect()
         code = int(code)
         return (code, output)
 
@@ -228,7 +247,7 @@ class AFMultiClient(object):
         """
         # Open socket and prepare for comms
         self.socket = socket.socket()
-        self.socket.connect(('localhost', self.control_port))
+        self.socket.connect((socket.gethostname(), self.control_port))
         return True
 
     def disconnect(self):
@@ -244,25 +263,35 @@ if __name__ == '__main__':
     args = docopt(__doc__, version=__version__)
 
     # Load parameters
-    params = load_params()
+    params = load_params(args['--params'])
 
-    instances = Configuration(args['--config'] or \
-                              params['multi_sync_config'] or \
-                              DEFAULT_MULTI_INSTANCE_CONFIG_FILE)
+    instances = Configuration(args['--config']) # or \
+                              #params['multi_sync_config'] or \
+                              #DEFAULT_MULTI_INSTANCE_CONFIG_FILE)
 
+    foreground = False
+    commands = ['start', 'stop', 'restart', 'reload', 'status', 'fullstatus']
     # If command == stop | restart | reload | status
-    if args['command'] != 'start':
+    for command in commands:
+        if args[command] == True:
+            break
+        else:
+            # We have to set the default action here
+            command = 'start'
+            foreground = True
+
+    if command != 'start':
         # command in ['stop', 'restart', 'reload', 'status']:
         # - load AFMultiClient class, send message to server and exit
         client = AFMultiClient(params)
-        code, output = client.communicate(args['command'])
+        code, output = client.communicate(command)
         client.disconnect()
 
-        # Shoe ehat we got
+        # Show what we got
         print output
 
         import sys
-        sys.exit(code) # What are the exit codes, and how to evaluate them??
+        sys.exit(code)
 
     # Create instances
     multi = AFMulti(instances)
@@ -285,4 +314,4 @@ if __name__ == '__main__':
             instance.step()
 
         if datetime.datetime.now() < next_run_time:
-            time.sleep((next_run_time - datetime.datetime.now()).to_seconds())
+            time.sleep((next_run_time - datetime.datetime.now()).seconds)

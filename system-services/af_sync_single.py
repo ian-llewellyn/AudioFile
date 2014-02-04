@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 Usage:
-  af-sync-single.py --host <host> --service <service> --format <format> [OPTIONS]
+  af_sync_single.py -h <host> -s <service> -f <format> [-d <YYYY-mm-dd>]                                                [-m <map_file>] [-p <params_file>] [--noop]
+  af_sync_single.py (--help | --version)
 
   Options:
     -h, --host=<host>           The host to be used to source the files.
@@ -11,14 +12,17 @@ Usage:
     -d, --date=<date>           Only process files for given date (Format YYYY-MM-DD).
     -m, --mapfile=<map_file>    Give the absolute path of a map file to use.
     -p, --params=<params_file>  Path to a file containing AFSingle parameters.
+                                [default: /etc/af-sync.d/af-sync.conf]
     -n, --noop                  No file operations, show what would be done.
+    --help                      Show this screen.
+    --version                   Show version number and exit.
 """
 __version__ = '0.2'
 
 import logging
 
 # DEFAULTS
-DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
+#DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
 DEFAULT_LOG_PATH = '/var/log/audiofile'
 DEFAULT_LOG_LEVEL = 'DEBUG'
 DEFAULT_INTER_DELTA_MIN_TIME = 1250
@@ -40,7 +44,6 @@ def utc_file_to_local(file_title):
     """
     # Strip unrequired trailing characters and append UTC to force strptime's hand
     string = file_title.rstrip('0123456789.mp').rstrip('-') + ' UTC'
-
     # Generate a UTC time tuple
     utc_time = time.strptime(string, '%Y-%m-%d-%H-%M-%S %Z')
 
@@ -115,7 +118,7 @@ class AFSingle(set):
 
         self.logger = logging.getLogger('.'.join(['af-sync',
             self.service, self.format]))
-        self.logger.handlers.append(logging.StreamHandler())
+        self.logger.addHandler(logging.StreamHandler())
         self.logger.level = self.log_level
         self.logger.info('Initialised %s %s' % (self.service, self.format))
         self.logger.debug('Host: %s, Date: %s, Map File: %s' % (self.host,
@@ -245,7 +248,6 @@ class AFSingle(set):
         self._req_URI = 'http://%s/audio/%s/%s/%s/%s' % (self.host,
                         self.format, self.service, date, current_record['file'])
         self._target_file = self.file_map(current_record['file'])
-
         # Does the directory exist?
         if not os.path.exists(os.path.dirname(self._target_file)):
             # Create the directory - date_dir most likely
@@ -405,15 +407,46 @@ class AFSingle(set):
             seconds=self._no_progress_sleep_time)
         return False
 
-def load_params():
+    def __hash__(self):
+        """
+        Implements the standard __hash__ method to allow comparisons.
+        """
+        # Purposly ommitting self['host'] gives us a nice way to ensure
+        # we don't accidentally configure the same service and format
+        # from two different hosts.
+        return hash(self.service + self.format + (self.date or '') +
+                    (self.map_file or ''))
+
+    def __eq__(self, other):
+        """
+        Implements the standard __eq__ method to allow comparisons.
+        """
+        if self['service'] != other['service']:
+            return False
+        if self['.format'] != other['format']:
+            return False
+        if self['date'] != other['date']:
+            return False
+        if self['map_file'] != other['map_file']:
+            return False
+        return True
+
+def load_params(params_file):
     params = {}
     try:
-        with file(args['--params'] or DEFAULT_PARAMS_FILE) as params_file:
+        with file(params_file) as params_file:
             eval(compile(params_file.read(), '/dev/null', 'exec'),
                  globals(), params)
+
     except IOError:
         # Params file not found, using built-in defaults.
         pass
+
+    keys = params.keys()
+    for key in keys:
+        params[key.lower()] = params[key]
+        params.pop(key)
+
     return params
 
 if __name__ == '__main__':
@@ -422,7 +455,7 @@ if __name__ == '__main__':
     args = docopt(__doc__, version=__version__)
 
     # Get the parameters
-    params = load_params()
+    params = load_params(args['--params'])
 
     # Instantiate class
     single = AFSingle(host=args['--host'], service=args['--service'],
