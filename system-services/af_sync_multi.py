@@ -37,6 +37,14 @@ class ConfigItem(dict):
     ConfigItem is a wrapper around a single instance config dict
     which makes it hashable, and allows it to be used in a set.
     """
+    def __init__(self, details):
+        super(ConfigItem, self).__init__(details)
+        self.host = self['host']
+        self.service = self['service']
+        self.format = self['format']
+        self.date = self['date']
+        self.map_file = self['map_file']
+
     def __hash__(self):
         """
         Implements the standard __hash__ method to allow comparisons.
@@ -51,13 +59,13 @@ class ConfigItem(dict):
         """
         Implements the standard __eq__ method to allow comparisons.
         """
-        if self['service'] != other['service']:
+        if self.service != other.service:
             return False
-        if self['.format'] != other['format']:
+        if self.format != other.format:
             return False
-        if self['date'] != other['date']:
+        if self.date != other.date:
             return False
-        if self['map_file'] != other['map_file']:
+        if self.map_file != other.map_file:
             return False
         return True
 
@@ -123,30 +131,92 @@ class AFMulti(set):
         super(AFMulti, self).add(single_instance)
 
     def stop(self):
+        """
+        Gently stop the AFMulti service by setting running = False.
+        This method allows the daemon to complete it's current main loop first.
+        """
         global running
         running = False
         return (os.EX_OK, 'Terminating on next loop.')
 
     def restart(self):
+        """
+        This should probably not be implemented here.
+        """
         return (os.EX_OK, 'restart') # os.EX_CONFIG, os.EX_NOHOST
 
     def reload(self):
-        return (os.EX_OK, 'reload') # os.EX_CONFIG
+        """
+        Reload the AFMulti class with a freshly read configuration.
+        """
+        global multi, params
+        # Read in the configuration
+        instances = Configuration(args['--config'])
+        # Recreate the multi set()
+        multi = AFMulti(instances, params=params)
+        return (os.EX_OK, 'Reload complete - changes may not take effect ' \
+            'immediately.') # os.EX_CONFIG
 
     def status(self):
-        return (os.EX_OK, 'status') # 1 = reload required
+        """
+        Return a string of the terse status for the currently running AFMulti
+        class. Also provide a return code which is 0 for complete success, and
+        1 for anything else.
+        """
+        configured = Configuration(args['--config'])
+        running = self # or multi
+
+        if configured == running:
+            output = "%d instances configured and running\n" \
+                'Note: this does not guarantee that data is coming ' \
+                'from the configured hosts.' % len(configured)
+            code = os.EX_OK
+        else:
+            output = "%d instances running.\n" % len(running)
+            output += "%d instances configured but not running.\n" \
+                % len(configured.difference(running))
+            output += "%d instances running but not configured.\n" \
+                % len(running.difference(configured))
+            code = 1
+        return (code, output) # 1 = reload required
 
     def fullstatus(self):
-        output = ''
-        for single_instance in self:
-            for key in ['host', 'service', 'format', 'date', 'map_file',
-                '_target_fp', '_next_run_time', '_delta_failures',
+        """
+        Return a string of verbose status for the currently running AFMulti
+        class. Also provide a return code which is 0 for complete success, and
+        1 for anything else.
+        """
+        configured = Configuration(args['--config'])
+        running = self # or multi
+
+        output = "%d instances running.\n" % len(running)
+        for single_instance in running:
+            output += "%s\n" % single_instance
+            for key in ['_target_fp', '_next_run_time', '_delta_failures',
                 '_no_progress_sleep_time']:
-                output += key + ': ' + str(getattr(single_instance, key)) + ', '
-            output = output.rstrip(' ,')
-            output += "\n"
-        output = output.rstrip("\n")
-        return (os.EX_OK, output)
+                output += " %s: %s\n" % (key, str(getattr(single_instance, key)))
+
+        if configured == running:
+            code = os.EX_OK
+        else:
+            output += "\n%d instances configured but not running.\n" \
+                % len(configured.difference(running))
+            for sync in configured.difference(running):
+                output += 'host: %s, service: %s, format: %s, date: %s, ' \
+                    "map_file: %s\n" % tuple([getattr(sync, key) for key in [
+                    'host', 'service', 'format', 'date', 'map_file']])
+
+            output += "\n%d instances running but not configured.\n" \
+                % len(running.difference(configured))
+            for sync in running.difference(configured):
+                output += "%s\n" % sync
+                for key in ['_target_fp', '_next_run_time', '_delta_failures',
+                    '_no_progress_sleep_time']:
+                    output += " %s: %s\n" % (key, str(getattr(sync, key)))
+
+            code = 1
+
+        return (code, output) # 1 = reload required
 
 class AFMultiServer(object):
     """
@@ -190,11 +260,12 @@ class AFMultiServer(object):
             try:
                 code, output = getattr(multi, command)()
             except AttributeError:
+                raise
                 code = 64
                 output = 'AttributeError: Command not implemented'
-            except TypeError:
-                code = 64
-                output = 'TypeError: Command not implemented'
+            #except TypeError:
+            #    code = 64
+            #    output = 'TypeError: Command not implemented'
             connection.send(','.join([str(code), str(len(output)), output]))
 
             connection.shutdown(socket.SHUT_WR)
@@ -214,8 +285,9 @@ class AFMultiClient(object):
         super(AFMultiClient, self).__init__()
         self.control_port = params['control_port'] or DEFAULT_CONTROL_PORT
         self.socket = None
+        self.connected = False
         if connect:
-            self.connect()
+           self.connected = self.connect()
 
     def communicate(self, message):
         """
@@ -247,8 +319,11 @@ class AFMultiClient(object):
         """
         # Open socket and prepare for comms
         self.socket = socket.socket()
-        self.socket.connect((socket.gethostname(), self.control_port))
-        return True
+        try:
+            self.socket.connect((socket.gethostname(), self.control_port))
+            return True
+        except socket.error:
+            return False
 
     def disconnect(self):
         """
@@ -283,18 +358,25 @@ if __name__ == '__main__':
     if command != 'start':
         # command in ['stop', 'restart', 'reload', 'status']:
         # - load AFMultiClient class, send message to server and exit
+        import sys
+
         client = AFMultiClient(params)
+
+        if not client.connected:
+            print 'Cannot connect to AFSyncMulti process - perhaps it is ' \
+                'not running.'
+            sys.exit(1)
+
         code, output = client.communicate(command)
         client.disconnect()
 
         # Show what we got
         print output
 
-        import sys
         sys.exit(code)
 
     # Create instances
-    multi = AFMulti(instances)
+    multi = AFMulti(instances, params=params)
 
     # A variable that will help us end gracefully
     # Used in main loop and in communications thread

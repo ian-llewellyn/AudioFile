@@ -258,10 +258,15 @@ class AFSingle(set):
         self.logger.info('Opening file: %s in append mode' % self._target_file)
         if not no_op:
             self._target_fp = open(self._target_file, 'ab')
+            if self.map_file != None:
+                # When using map files, we must ensure that we overwrite target
+                # files every time to guarantee consistency with the source.
+                self._target_fp.truncate(0)
         else:
             self._target_fp = None
 
         self._delta_failures = 0
+        self._no_progress_sleep_time = 0
 
         return True
 
@@ -279,6 +284,10 @@ class AFSingle(set):
         fetching only the bytes beyond the end of the target_file size.
         """
         self.logger.debug('Called fetch_delta()')
+
+        if self._target_fp == None:
+            self.logger.warning('fetch_delta() fail - No target file')
+            return False
 
         # Move file pointer to the end of the file
         self._target_fp.seek(0, 2)
@@ -403,7 +412,9 @@ class AFSingle(set):
             return None
 
         self._no_progress_sleep_time = self._no_progress_sleep_time * 2 or 1
-        self._retry_after = datetime.datetime.now() + datetime.timedelta(
+        if self._no_progress_sleep_time > self.no_progress_max_wait:
+            self._no_progress_sleep_time = self.no_progress_max_wait
+        self._next_run_time = datetime.datetime.now() + datetime.timedelta(
             seconds=self._no_progress_sleep_time)
         return False
 
@@ -421,15 +432,21 @@ class AFSingle(set):
         """
         Implements the standard __eq__ method to allow comparisons.
         """
-        if self['service'] != other['service']:
+        if self.service != other.service:
             return False
-        if self['.format'] != other['format']:
+        if self.format != other.format:
             return False
-        if self['date'] != other['date']:
+        if self.date != other.date:
             return False
-        if self['map_file'] != other['map_file']:
+        if self.map_file != other.map_file:
             return False
         return True
+
+    def __str__(self):
+        values = [getattr(self, key) for key in ['host', 'service', 'format',
+            'date', 'map_file']]
+        return 'host: %s, service: %s, format: %s, date: %s, map_file: %s' % \
+            tuple(values)
 
 def load_params(params_file):
     params = {}
