@@ -12,7 +12,6 @@ function getParameterByName(name) {
     return results == null ? undefined : decodeURIComponent(results[1].replace(/\+/g, " "));
 }
 
-
 /* Defaults that the player will use. */
 var playerDefaults = {
 	'startTrack': 'audio/sweet_dreams.mp3',

@@ -2,7 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="X-UA-Compatible" content="IE=9">
+    <!-- <meta http-equiv="X-UA-Compatible" content="IE=edge"> -->
     <meta name="description" content="">
     <meta name="author" content="">
 
@@ -44,6 +45,11 @@
 
 	<!--<script src="jquery-ui-1.10.3.custom/js/jquery-1.9.1.js"></script>-->
 	<script src="jquery-ui-1.10.3.custom/js/jquery-ui-1.10.3.custom.js"></script>
+
+	<style>
+	button:focus { outline: none !important; } 
+
+	</style>	
 </head>
 <body id="dates">
 
@@ -77,7 +83,7 @@
 					  <span id="station_name">SELECT STATION</span><br />
 					  <span id="playing_status">STOPPED</span><br />
 					  <span id="station_name">LIVE</span><br />
-					  <span id="file_type">MP3<span><br />
+					  <span id="file_type">MP3</span><br />
 					  <span id="speed">1X</span><br />
 					  <span id="volume">100%</span><br />
 					</div>
@@ -111,14 +117,6 @@
 					</div>
 				</div>
 
-
-
-<style>
-button:focus { outline: none !important; } 
-
-</style>
-
-
 				<div class="row controls">
 					<div class="col-xs-12" style="background-color:transparent; margin-top:10px;">
 
@@ -134,8 +132,8 @@ button:focus { outline: none !important; }
 
 						  	<div class="btn-outline-group">
 				                <div class="btn-outline">
-				                  <button class="btn btn-default btn-lg play" type="button">
-				                  	<span id="playbutton" class="icon rte-icon-play-1" onclick="return player.play();" style=""></span>
+				                  <button class="btn btn-default btn-lg play" type="button" onclick="player.play();">
+				                  	<span  id="playbutton" class="icon rte-icon-play-1" style=""></span>
 				                  </button>
 				                </div>
 						  	</div><!-- / -->
