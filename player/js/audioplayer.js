@@ -655,6 +655,8 @@ AudioPlayer.prototype.init = function() {
 
     this.getServices(); // Load our stations.
     $(this.id).jPlayer( {
+        swfPath:"js/jplayer/jPlayer.swf",
+        solution:"html, flash",
         ready: function () {
            // Any post init for jPlayer. 
         }
