@@ -64,7 +64,7 @@ AudioPlayer.prototype.checkParams = function(){
     // We need these three to play
     var start   = getParameterByName('start');
     var service = getParameterByName('service');
-    var stop    = getParameterByName('stop');
+    var stop    = getParameterByName('end');
 
     if(start !== undefined && service !== undefined){
 
