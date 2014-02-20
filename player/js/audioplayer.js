@@ -341,9 +341,9 @@ AudioPlayer.prototype.play = function() {
 AudioPlayer.prototype.skip = function(seconds){
     if(playerState.state == "PLAYING")
     {
-        console.log('Elapsed: ' + playerState.elapsed);
-        console.log('Skip: ' + seconds);
-        console.log( parseInt(playerState.elapsed,10) + parseInt(seconds,10) );
+        //console.log('Elapsed: ' + playerState.elapsed);
+        //console.log('Skip: ' + seconds);
+        //console.log( parseInt(playerState.elapsed,10) + parseInt(seconds,10) );
 
         var newTime = parseInt(playerState.elapsed,10) + parseInt(seconds,10);
 
@@ -357,7 +357,7 @@ AudioPlayer.prototype.skip = function(seconds){
             newTime = 3600;
         }
 
-        $(this.id).jPlayer("play", newTime );
+        $(player.id).jPlayer("play", newTime );
     }
 };
 
