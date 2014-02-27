@@ -24,7 +24,7 @@ import logging
 # DEFAULTS
 #DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
 DEFAULT_LOG_PATH = '/var/log/audiofile'
-DEFAULT_LOG_LEVEL = 'DEBUG'
+DEFAULT_LOG_LEVEL = logging.DEBUG
 DEFAULT_INTER_DELTA_MIN_TIME = 1250
 DEFAULT_DELTA_RETRIES = 2
 DEFAULT_NO_PROGRESS_MAX_WAIT = 120000
@@ -32,9 +32,7 @@ DEFAULT_MAIN_LOOP_MIN_TIME = 750
 DEFAULT_DOWNLOAD_CHUNK_SIZE_MAX = 2 * 1024 * 1024
 DEFAULT_AUDIO_STORAGE_PATH = '/var/audiofile/audio'
 
-
 import datetime, urllib2, simplejson, os, time
-LOGGING = {}
 
 def utc_file_to_local(file_title):
     """ utc_file_to_local(file_title) -> 2 tuple
@@ -73,7 +71,7 @@ class AFSingle(set):
     instance = AFSingle(host=host, service=service, format=format
         [, date=date][, map_file=map_file][, params=params_dict])
     params_dict = {
-        'inter_delta_min_time': int milliseconds,
+        'main_loop_min_time': int milliseconds,
         'no_progress_max_wait': int milliseconds
     }
     """
@@ -101,8 +99,8 @@ class AFSingle(set):
             for key in self.params:
                 self.__dict__[key] = self.params[key]
             del self.params
-        if not hasattr(self, 'inter_delta_min_time'):
-                self.inter_delta_min_time = DEFAULT_INTER_DELTA_MIN_TIME
+        if not hasattr(self, 'main_loop_min_time'):
+                self.main_loop_min_time = DEFAULT_MAIN_LOOP_MIN_TIME
         if not hasattr(self, 'delta_retries'):
                 self.delta_retries = DEFAULT_DELTA_RETRIES
         if not hasattr(self, 'no_progress_max_wait'):
@@ -139,6 +137,7 @@ class AFSingle(set):
         For a given source file, do a lookup in the map and return the
         relevant target file.
         """
+        self.logger.debug('file_map(%s)' % src_file)
         if not self.map_file:
             date = '-'.join(src_file.split('-')[:3])
             return os.path.sep.join([self.audio_storage_path,
@@ -206,9 +205,6 @@ class AFSingle(set):
         calling the get_file_list method.
         return True if a new file has been lined up
         return False if a new file is not lined up
-        We need to determine if we have another file to go to,
-        or if we get_file_list again.
-        FIXME: How to not go over files numerous times?
         """
         if self._target_fp:
             # Close the existing file if it's open
@@ -219,6 +215,7 @@ class AFSingle(set):
             current_record = self.records_iter.next()
 
         except StopIteration:
+            # No (more) files available
             # Get the file list
             for record in self.get_file_list():
                 self.add(Record(record))
@@ -285,12 +282,18 @@ class AFSingle(set):
         """
         self.logger.debug('Called fetch_delta()')
 
-        if self._target_fp == None:
+        try:
+            # Move file pointer to the end of the file
+            self._target_fp.seek(0, 2)
+        except AttributeError:
             self.logger.warning('fetch_delta() fail - No target file')
             return False
+        except ValueError, e:
+            if e.message != 'I/O operation on closed file':
+                raise
+            self.logger.debug(self.fullstatus())
+            return False
 
-        # Move file pointer to the end of the file
-        self._target_fp.seek(0, 2)
         # How many bytes have we got already?
         offset = self._target_fp.tell()
         self.logger.debug('File: %s has size: %d' % (self._target_file, offset))
@@ -386,7 +389,7 @@ class AFSingle(set):
             return None
 
         self._next_run_time = datetime.datetime.now() + datetime.timedelta(
-            milliseconds=self.inter_delta_min_time)
+            milliseconds=self.main_loop_min_time)
 
         if self.fetch_delta():
             self._delta_failures = 0
@@ -407,16 +410,25 @@ class AFSingle(set):
             # on to the next file.
             return False
 
+        # Increment the counter here as it may be reset in the next_file() method
+        self._no_progress_sleep_time = self._no_progress_sleep_time * 2 or 15
+
         if not self.next_file() and self.date != None:
             # Failed to get another file and a date was passed into the program
             return None
 
-        self._no_progress_sleep_time = self._no_progress_sleep_time * 2 or 1
         if self._no_progress_sleep_time > self.no_progress_max_wait:
             self._no_progress_sleep_time = self.no_progress_max_wait
         self._next_run_time = datetime.datetime.now() + datetime.timedelta(
             seconds=self._no_progress_sleep_time)
         return False
+
+    def fullstatus(self):
+        output = "%s\n" % self
+        for key in ['_target_fp', '_next_run_time', '_delta_failures',
+            '_no_progress_sleep_time']:
+            output += " %s: %s" % (key, str(getattr(self, key)))
+        return output
 
     def __hash__(self):
         """
@@ -487,7 +499,7 @@ if __name__ == '__main__':
         single.step()
 
         if datetime.datetime.now() < next_run_time:
-            sleep_time = (next_run_time - datetime.datetime.now()).total_seconds()
+            sleep_time = (next_run_time - datetime.datetime.now()).microseconds() / 1000000.0
             single.logger.info('main loop is executing too quickly, '
                 'sleeping for %f seconds' % sleep_time)
             time.sleep(sleep_time)

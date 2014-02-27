@@ -2,16 +2,18 @@
 # -*- coding: utf-8 -*-
 """
 Usage:
+  af_sync_multi.py [options]
   af_sync_multi.py [start|restart] [options]
-  af_sync_multi.py [stop|reload|status|fullstatus] [-c <config_file>] [-p <params_file>]
+  af_sync_multi.py [stop|reload|status|fullstatus] [options]
 
-  Options:
-    -d, --date=<date>           Only process files on this date (Format: YYYY-mm-dd).
-    -c, --config=<config_file>  The multi instance configuration file to load.
-                                [default: af-sync-multi.conf]
-    -p, --params=<params_file>  The parameters file to load.
-                                [default: af-sync.conf]
-    -n, --noop                  Skip file operations.
+  -p, --params=<params_file>  The parameters file to load.
+                              [default: af-sync.conf]
+  -c, --config=<config_file>  The multi instance configuration file to load.
+                              [default: af-sync-multi.conf]
+  -d, --date=<date>           Only process files on this date (Format: YYYY-mm-dd).
+                              This option has no effect in the third usage pattern.
+  -n, --noop                  Skip file operations.
+                              This option has no effect in the third usage pattern.
 """
 __version__ = '0.2'
 
@@ -25,7 +27,7 @@ DEFAULT_LOG_PATH = '/var/log/audiofile'
 DEFAULT_LOG_LEVEL = logging.INFO
 DEFAULT_CONTROL_PORT = 1111
 
-logger = logging.getLogger('af-sync')
+logger = logging.getLogger(__name__)
 logger.addHandler(logging.StreamHandler())
 logger.level = logging.DEBUG
 
@@ -44,6 +46,7 @@ class ConfigItem(dict):
         self.format = self['format']
         self.date = self['date']
         self.map_file = self['map_file']
+        logger.debug('Initiated ConfigItem: %s' % self)
 
     def __hash__(self):
         """
@@ -91,18 +94,22 @@ class Configuration(set):
                 if line.startswith('#'):
                     # Comment line
                     continue
-                host, svc_format, map_file = (line + ' ').split(' ', 2)
-                map_file = map_file.rstrip() or None
+                host, _, rest = line.partition(' ')
+                svc_format, _, map_file = rest.partition(' ')
+                map_file = map_file or None
                 formats, service = svc_format.split(':')
                 if formats == '*':
                     formats = ['mp2', 'mp3']
                 else:
                     formats = [formats]
                 for fmt in formats:
+                    logger.debug('Adding configuration for %s, %s, %s, %s' % \
+                        (host, service, format, map_file))
                     self.add(ConfigItem(
                         {'host': host, 'service': service,
                          'format': fmt, 'date': date,
                          'map_file': map_file}))
+            logger.info('Loaded configuration file %s' % config_file)
 
 class AFMulti(set):
     """
@@ -120,6 +127,7 @@ class AFMulti(set):
         for single_config in multi_config:
             single_instance = AFSingle(params=params, **single_config)
             self.add(single_instance)
+        logger.debug('AFMulti Initialised')
 
     def add(self, single_instance):
         """
@@ -191,10 +199,7 @@ class AFMulti(set):
 
         output = "%d instances running.\n" % len(running)
         for single_instance in running:
-            output += "%s\n" % single_instance
-            for key in ['_target_fp', '_next_run_time', '_delta_failures',
-                '_no_progress_sleep_time']:
-                output += " %s: %s\n" % (key, str(getattr(single_instance, key)))
+            output += "%s\n" % single_instance.fullstatus()
 
         if configured == running:
             code = os.EX_OK
@@ -209,10 +214,7 @@ class AFMulti(set):
             output += "\n%d instances running but not configured.\n" \
                 % len(running.difference(configured))
             for sync in running.difference(configured):
-                output += "%s\n" % sync
-                for key in ['_target_fp', '_next_run_time', '_delta_failures',
-                    '_no_progress_sleep_time']:
-                    output += " %s: %s\n" % (key, str(getattr(sync, key)))
+                output += "%s\n" % sync.fullstatus()
 
             code = 1
 
@@ -238,12 +240,14 @@ class AFMultiServer(object):
         except socket.error, error:
             logger.error('An error occurred when bind()ing: %s', error)
             raise
+        logger.info('AFMulti server started on %s:%d' % (self.host, self.port))
 
     def connect(self):
         """
         Bind to the machines address.
         """
         self.socket.bind((self.host, self.port))
+        logger.debug('AFMultiServer bound to %s:%d' % (self.host, self.port))
         return True
 
     def run(self):
@@ -252,8 +256,11 @@ class AFMultiServer(object):
         and dispatches them.
         """
         self.socket.listen(0)
+        logger.debug('AFMultiServer listening for connections')
         while running:
             (connection, address) = self.socket.accept()
+            logger.info('AFMultiServer received connection from %s:%d' % \
+                address)
             command = connection.recv(1024)
             #connection.shutdown(socket.SHUT_RD) # The client shuts down the
                                                  # writing end of the pipe.
@@ -271,6 +278,7 @@ class AFMultiServer(object):
             connection.shutdown(socket.SHUT_WR)
             #connection.close() # Allow the client call the close() function
                                 # so that TIME_WAIT is on the client side.
+            logger.info('AFMultiServer finished writing to %s:%d' % address)
 
 class AFMultiClient(object):
     """
@@ -340,10 +348,6 @@ if __name__ == '__main__':
     # Load parameters
     params = load_params(args['--params'])
 
-    instances = Configuration(args['--config']) # or \
-                              #params['multi_sync_config'] or \
-                              #DEFAULT_MULTI_INSTANCE_CONFIG_FILE)
-
     foreground = False
     commands = ['start', 'stop', 'restart', 'reload', 'status', 'fullstatus']
     # If command == stop | restart | reload | status
@@ -375,6 +379,13 @@ if __name__ == '__main__':
 
         sys.exit(code)
 
+    # Start program proper
+    logger.info('Starting AFMulti process')
+
+    instances = Configuration(args['--config']) # or \
+                              #params['multi_sync_config'] or \
+                              #DEFAULT_MULTI_INSTANCE_CONFIG_FILE)
+
     # Create instances
     multi = AFMulti(instances, params=params)
 
@@ -382,12 +393,25 @@ if __name__ == '__main__':
     # Used in main loop and in communications thread
     running = True
 
+    # Fork at this point
+    if not foreground:
+        logger.info('Daemonising...')
+        import os
+        pid = os.fork()
+        if pid > 0:
+            # This is the parent
+            logger.info('Parent exiting.')
+            sys.exit(os.EX_OK)
+
+    logger.info('Child successfully fork()ed.')
+
     # Start communications interface thread
     thread.start_new_thread(AFMultiServer(params).run, ())
 
     import datetime, time
 
     # infinite loop
+    logger.debug('Entering main loop')
     while running:
         next_run_time = datetime.datetime.now() + datetime.timedelta(
             milliseconds=params['main_loop_min_time'])
@@ -395,5 +419,8 @@ if __name__ == '__main__':
         for instance in multi:
             instance.step()
 
-        if datetime.datetime.now() < next_run_time:
-            time.sleep((next_run_time - datetime.datetime.now()).seconds)
+        now = datetime.datetime.now()
+        if now < next_run_time:
+            sleep_time = (next_run_time - now).seconds + \
+                         (next_run_time - now).microseconds / 1000000.0
+            time.sleep(sleep_time)
