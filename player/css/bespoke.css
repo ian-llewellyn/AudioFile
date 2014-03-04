@@ -310,11 +310,10 @@ margin: 0;
 .navlist li a
 {
 display: block;
-padding: 0px 5px 0px 0.5em;
+padding: 5px 5px 5px 0.5em;
 color: #0088CC;
 text-decoration: none;
 width: 100%;
-font-size: 20px;
 }
 
 html>body .navlist li a { width: auto; }
@@ -335,18 +334,14 @@ color: #fff;
   color:white;  
 }
 
-.navlist li.navactive a {
-  color:white;  
-}
-
 .thumbnails li.active a {
   border-radius:10px;
   border:3px solid #1C1E22;
 }
 
 .carousel-inner .active li.active_station {
-  background:transparent url(../dist/img/bullet-red.png) no-repeat 40px 93px !important;
-  padding-bottom:13px !important;
+  background:transparent url(../dist/img/bullet-red.png) no-repeat 40px 0 !important;
+  padding-top:13px !important;
 }
 
 /* CUSTOMIZE THE CAROUSEL
