@@ -417,6 +417,7 @@ color: #fff;
 
 .carousel-control {
 width: 0%;
+-ms-filter: "progid:DXImageTransform.Microsoft.gradient(enabled=false)" !important;
 }
 
 .station {
