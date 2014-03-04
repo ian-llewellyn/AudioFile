@@ -184,86 +184,60 @@ AudioPlayer.prototype.mark = function(position){
     }
 };
 
+
 /*
-    Generate a download link for a given time period, station and format.
+    Update download hour tags with the correct paths.
 */
-AudioPlayer.prototype.getDownloadLink = function(service, start, end, format){
-
-    start = moment(start).format('YYYY-MM-DD-HH-mm-ss-hh');
-    end   = moment(end).format('YYYY-MM-DD-HH-mm-ss-hh');
-
-    if(!format || format === undefined){
-        format = playerDefaults.defaultFormat;
-    }
-
-    var title = service + "_" + start + "__" + end;
-    var link = playerDefaults.fileDownloadUrl;
-    link += "?service="    + service;
-    link += "&start="      + start;
-    link += "&end="        + end;    
-    link += "&format="     + format;
-    link += "&file_title=" + title;
-
-    return link;
+AudioPlayer.prototype.updateDownloadHourLinks = function(){
+    var mp3Link = playerDefaults.audioUrl + '/mp3/' + playerState.filename;
+    jQuery('#downloadHourMP3').attr('href', mp3Link);
+    jQuery('#downloadHourMP2').attr('href', '');
 };
 
 /*
-    Trigger a file download. 
-    Not sure if this is exactly the best method but AJAX won't work here.
-*/
-AudioPlayer.prototype.triggerDownload = function(link){
-    document.location.href = link;
-};
-
-/*
-    Download an audio file with given start and end times
-    - mode (mark || hour)
-        mark: use the marked start and end times.
-        hour: download the currently playing hour.
+    Download an audio file between marked start and end. 
     - format (mp2 || mp3)
 */
-AudioPlayer.prototype.download = function(mode,format){
-    if(mode == 'mark')
+AudioPlayer.prototype.downloadClip = function(format){
+
+    if(playerState.markstart === undefined || playerState.markend === undefined)
     {
-        if(playerState.markstart === undefined || playerState.markend === undefined)
-        {
-            alert("Please mark the start and end positions of the required clip first.");
-        }
-        else if( moment(playerState.markstart).isAfter( playerState.markend ) )
-        {
-            // Should never happen.
-            alert("End position cannot be before start.");
-            playerState.markstart = undefined;
-            playerState.markend = undefined;
-            $('#start-point').empty();
-            $('#end-point').empty();
-        }
-        else if( moment(playerState.markstart).isBefore( playerState.markend ) )
-        {
-            // Download.
-            var link = this.getDownloadLink( playerState.station, playerState.markstart, playerState.markend, format );
-            if(link){
-                this.triggerDownload( link );
-                
-                // Should we remove markers after download clicked?
-                playerState.markstart = undefined;
-                playerState.markend = undefined;
-                $('#start-point').empty();
-                $('#end-point').empty();                
-            }
-            else{
-                alert("Could not generate download link.");
-                if(debug){
-                    console.log(link);
-                }
-            }
-        }
+        alert("Please mark the start and end positions of the required clip first.");
     }
-    else if( mode == 'hour')
+    else if( moment(playerState.markstart).isAfter( playerState.markend ) )
     {
-        var date = moment.utc(playerState.playDate).format('YYYY-MM-DD');
-        var link = this.getFileUrl(format, playerState.station, date, playerState.filename);
-        this.triggerDownload(link);
+        // Should never happen.
+        alert("End position cannot be before start.");
+        playerState.markstart = undefined;
+        playerState.markend = undefined;
+        $('#start-point').empty();
+        $('#end-point').empty();
+    }
+    else if( moment(playerState.markstart).isBefore( playerState.markend ) )
+    {
+        // Download.
+        start = moment(playerState.markstart).format('YYYY-MM-DD-HH-mm-ss-hh');
+        end   = moment(playerState.markend).format('YYYY-MM-DD-HH-mm-ss-hh');
+
+        if(!format || format === undefined){
+            format = playerDefaults.defaultFormat;
+        }
+
+        var title = service + "_" + start + "__" + end;
+        var link = playerDefaults.fileDownloadUrl;
+        link += "?service="    + service;
+        link += "&start="      + start;
+        link += "&end="        + end;    
+        link += "&format="     + format;
+        link += "&file_title=" + title;
+
+        jQuery.fileDownload(link);
+        
+        // Should we remove markers after download clicked?
+        playerState.markstart = undefined;
+        playerState.markend = undefined;
+        $('#start-point').empty();
+        $('#end-point').empty();                
     }
 };
 
