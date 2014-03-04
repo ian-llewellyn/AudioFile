@@ -4,6 +4,9 @@
  * 
  *****************************************************/
 
+// Are we in debug mode?
+var debug = true;
+
 /* Get a named parameter that may have been passed in the URL string */
 function getParameterByName(name) {
     name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
@@ -14,35 +17,36 @@ function getParameterByName(name) {
 
 /* Defaults that the player will use. */
 var playerDefaults = {
-	'startTrack': 'audio/sweet_dreams.mp3',
-    'stationsUrl': 'http://audiofile.rte.ie/webservice/v3/listservices.php',
-    'filelistUrl': 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
-    'audioUrl': 'http://audiofile.rte.ie/audio/',
-    'stations': undefined,
-    'defaultFormat':'mp3',
-    'trackLengthDefault': 3600, // Seconds.
-    'preload': undefined
+	'startTrack'           : 'audio/sweet_dreams.mp3',
+    'stationsUrl'          : 'http://audiofile.rte.ie/webservice/v3/listservices.php',
+    'filelistUrl'          : 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
+    'fileDownloadUrl'      : 'http://audiofile.rte.ie/webservice/v3/download.php',
+    'audioUrl'             : 'http://audiofile.rte.ie/audio/',
+    'stations'             : undefined,
+    'defaultFormat'        : 'mp3',
+    'trackLengthDefault'   : 3600, // Seconds.
+    'preload'              : undefined
 };
 
 /* Track current player state. */
 var playerState = {
-    'station' : undefined,
-    'stationName': undefined,
-    'filename': undefined,
-    'date': new Date(),         // Date selected by cal widget.
-    'mediaUrl': undefined,
-    'playDate': undefined,      // Current date we are playing.
-    'state':'STOPPED',
-    'elapsed': undefined,
-    'playSpeed': 1,
-    'volume': 1,
-    'muted': false,
-    'playlist': {},
+    'station'       : undefined,
+    'stationName'   : undefined,
+    'filename'      : undefined,
+    'date'          : new Date(),         // Date selected by cal widget.
+    'mediaUrl'      : undefined,
+    'playDate'      : undefined,      // Current date we are playing.
+    'state'         : 'STOPPED',
+    'elapsed'       : undefined,
+    'playSpeed'     : 1,
+    'volume'        : 1,
+    'muted'         : false,
+    'playlist'      : {},
     'playlistOffset': 0,
-    'markstart': undefined,
-    'markend': undefined,
-    'callbacks':undefined,
-    'clipMode':false
+    'markstart'     : undefined,
+    'markend'       : undefined,
+    'callbacks'     : undefined,
+    'clipMode'      : false
 };
 
 /* 
@@ -140,40 +144,91 @@ AudioPlayer.prototype.mark = function(position){
     }
 };
 
-
 /*
-    Download an audio file with given start and end times.
+    Generate a download link for a given time period, station and format.
 */
-AudioPlayer.prototype.download = function(){
-    if(playerState.markstart === undefined || playerState.markend === undefined)
-    {
-        alert("Please mark the start and end positions of the required clip first.");
-    }
-    else if( moment(playerState.markstart).isAfter( playerState.markend ) )
-    {
-        // Should never happen.
-        alert("End position cannot be before start.");
-        playerState.markstart = undefined;
-        playerState.markend = undefined;
-        $('#start-point').empty();
-        $('#end-point').empty();
-    }
-    else if( moment(playerState.markstart).isBefore( playerState.markend ) )
-    {
-        // Download.
-        console.log("Download");
+AudioPlayer.prototype.getDownloadLink = function(service, start, end, format){
 
-        // Should we remove markers after download clicked?
-        playerState.markstart = undefined;
-        playerState.markend = undefined;
-        $('#start-point').empty();
-        $('#end-point').empty();
+    start = moment(start).format('YYYY-MM-DD-HH-mm-ss-hh');
+    end = moment(end).format('YYYY-MM-DD-HH-mm-ss-hh');
+
+    if(!format || format === undefined){
+        format = playerDefaults.defaultFormat;
     }
 
+    var title = service + "_" + start + "__" + end;
+    var link = playerDefaults.fileDownloadUrl;
+    link += "?service="    + service;
+    link += "&start="      + start;
+    link += "&end="        + end;    
+    link += "&format="     + format;
+    link += "&file_title=" + title;
+
+    return link;
 };
 
 /*
-    Convert filename to data object.
+    Trigger a file download. 
+    Not sure if this is exactly the best method but AJAX won't work here.
+*/
+AudioPlayer.prototype.triggerDownload = function(link){
+    document.location.href = link;
+};
+
+/*
+    Download an audio file with given start and end times
+    - mode (mark || hour)
+        mark: use the marked start and end times.
+        hour: download the currently playing hour.
+    - format (mp2 || mp3)
+*/
+AudioPlayer.prototype.download = function(mode,format){
+    if(mode == 'mark')
+    {
+        if(playerState.markstart === undefined || playerState.markend === undefined)
+        {
+            alert("Please mark the start and end positions of the required clip first.");
+        }
+        else if( moment(playerState.markstart).isAfter( playerState.markend ) )
+        {
+            // Should never happen.
+            alert("End position cannot be before start.");
+            playerState.markstart = undefined;
+            playerState.markend = undefined;
+            $('#start-point').empty();
+            $('#end-point').empty();
+        }
+        else if( moment(playerState.markstart).isBefore( playerState.markend ) )
+        {
+            // Download.
+            var link = this.getDownloadLink( playerState.station, playerState.markstart, playerState.markend, format );
+            if(link){
+                this.triggerDownload( link );
+                
+                // Should we remove markers after download clicked?
+                playerState.markstart = undefined;
+                playerState.markend = undefined;
+                $('#start-point').empty();
+                $('#end-point').empty();                
+            }
+            else{
+                alert("Could not generate download link.");
+                if(debug){
+                    console.log(link);
+                }
+            }
+        }
+    }
+    else if( mode == 'hour')
+    {
+        var date = moment.utc(playerState.playDate).format('YYYY-MM-DD');
+        var link = this.getFileUrl(format, playerState.station, date, playerState.filename);
+        this.triggerDownload(link);
+    }
+};
+
+/*
+    Convert filename to date object.
 */
 AudioPlayer.prototype.parseFileDate = function(filename) {
     filename = filename.replace('.mp3','');
@@ -215,7 +270,7 @@ AudioPlayer.prototype.getServices = function() {
             playerState.callbacks.fire('stationsLoaded', playerObj);
         },
         error: function(e) {
-           console.log(e.message);
+            if(debug){ console.log(e.message); }
            alert("Could not get station list from web service.");
         }
     });
@@ -270,7 +325,7 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
             playerState.callbacks.fire('filesLoaded', playerObj);
         },
         error: function(e) {
-           console.log(e.message);
+           if(debug){ console.log(e.message); }
            alert("Could not fetch file list from web service.");
         }
     });    
@@ -288,7 +343,7 @@ AudioPlayer.prototype.getFileUrl = function(format, service, date, file){
             date = moment.utc(date).format('YYYY-MM-DD');
         }
     } catch(e){
-        console.log(e);
+        if(debug){ console.log(e); }
     }
 
     return playerDefaults.audioUrl + format + "/" + service + "/" + date + "/" + file;
@@ -341,10 +396,6 @@ AudioPlayer.prototype.play = function() {
 AudioPlayer.prototype.skip = function(seconds){
     if(playerState.state == "PLAYING")
     {
-        //console.log('Elapsed: ' + playerState.elapsed);
-        //console.log('Skip: ' + seconds);
-        //console.log( parseInt(playerState.elapsed,10) + parseInt(seconds,10) );
-
         var newTime = parseInt(playerState.elapsed,10) + parseInt(seconds,10);
 
         // It would be nice to skip back to the previous hour instead - offset.
@@ -563,7 +614,7 @@ AudioPlayer.prototype.advancePlaylist = function(playerObj, offset){
 
 /*
  * Update the time elapsed on the display using the selected hour as an offset.
- * Event fires every ~250 ms.
+ * Event fires every ~250 ms (4Hz).
  *
  */
 AudioPlayer.prototype.updateTimer = function(event, playerObj){
@@ -603,8 +654,6 @@ AudioPlayer.prototype.init = function() {
     var preload = this.checkParams();
     if(preload){
         playerState.preload = preload;
-        console.log('preload');
-
         playerState.station = preload.stationid;
         playerState.date = preload.start;
         playerState.playDate = preload.start;
@@ -621,7 +670,6 @@ AudioPlayer.prototype.init = function() {
         }
 
         var onLoadPlay = function(event,playerObj){
-            console.log(event);
             if(event == "stationsLoaded"){
                 /*
                     Assuming that the file array remains in index == hour order.
@@ -645,7 +693,6 @@ AudioPlayer.prototype.init = function() {
                 playerState.clipMode = true;
             }            
             if(event == "filesLoaded"){
-                console.log("filesLoaded event");
                 playerState.callbacks.remove(this);
             }
         };
@@ -696,7 +743,9 @@ AudioPlayer.prototype.init = function() {
             alert("This program is currently unavailable.");
             playerObj.advancePlaylist(playerObj, 0); 
         }
-        console.log("Error Event: type = " + event.jPlayer.error.type); 
+        if(debug){
+            console.log("Error Event: type = " + event.jPlayer.error.type);
+        } 
     });
 
     // Set the default displayed date to today.
