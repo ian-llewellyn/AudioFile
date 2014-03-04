@@ -17,7 +17,7 @@
 
         var defaults = {
             containerWidth : 330,                   // fixed (px)
-            containerHeight : 320,                  // fixed (px)
+            containerHeight : 335,                  // fixed (px)
             headerWidth : 38,                       // fixed (px)
 
             activateOn : 'click',                   // click or mouseover
