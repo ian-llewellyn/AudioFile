@@ -186,7 +186,7 @@
 				                  <button  class="btn btn-default btn-sm mark" type="button" onclick="player.mark('start');">
 				                  	Mark Start
 				                  </button>
-				                  <button  class="btn btn-default btn-sm" type="button" onclick="player.playClipPreview('start');">
+				                  <button  class="btn btn-default btn-sm" type="button" onclick="">
 				                  	<span class="icon rte-icon-mark-start-1"></span>
 				                  </button>
 				                </div>
@@ -195,7 +195,7 @@
 				                  <button class="btn btn-default btn-sm mark" type="button" onclick="player.mark('end');">
 				                  	Mark End
 				                  </button>
-				                  <button class="btn btn-default btn-sm" type="button" onclick="player.playClipPreview('end');">
+				                  <button class="btn btn-default btn-sm" type="button" onclick="">
 				                  	<span class="icon rte-icon-mark-end"></span>
 				                  </button>
 				                </div>
@@ -210,26 +210,10 @@
 				               		</button>
 
 									<ul class="dropdown-menu">
-					                  <li>
-					                  	<a href="javascript:void(0);" id="downloadHourMP2" download="">Download Hour as MP2 
-					                  		<span class="icon rte-icon-fontawesome-webfont"></span>
-					                  	</a>
-					                  </li>
-					                  <li>
-					                  	<a href="javascript:void(0);" id="downloadHourMP3" download="">Download Hour as MP3 
-					                  		<span class="icon rte-icon-fontawesome-webfont"></span>
-					                  	</a>
-					                  </li>
-					                  <li>
-					                  	<a href="javascript:void(0);" class="disabled" onclick="player.downloadClip('mp2');">Download Clip as MP2 
-					                  		<span class="icon rte-icon-fontawesome-webfont"></span>
-					                  	</a>
-					                  </li>
-					                  <li>
-					                  	<a href="javascript:void(0);" class="disabled" onclick="player.downloadClip('mp3');">Download Clip as MP3 
-					                  		<span class="icon rte-icon-fontawesome-webfont"></span>
-					                  	</a>
-					                  </li>
+					                  <li><a href="#">Download Hour as MP2 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                  <li><a href="#">Download Hour as MP3 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                  <li><a href="#" class="disabled">Download Clip as MP2 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                  <li><a href="#" class="disabled">Download Clip as MP3 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
 					                  <li class="divider"></li>
 					                  <li><a href="#">Email link <span class="icon rte-icon-fontawesome-webfont-1"></span></a></li>
 					                </ul>
@@ -391,9 +375,6 @@
 
     <!-- Moment.js Date lib -->
     <script type="text/javascript" src="js/moment.min.js"></script>
-
-    <!-- File Download lib -->
-    <script type="text/javascript" src="js/jquery.fileDownload.js"></script>
 
     <!-- Cookie lib -->
     <script type="text/javascript" src="js/jquery.cookie.js"></script>
