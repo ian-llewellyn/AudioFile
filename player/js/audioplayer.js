@@ -90,6 +90,11 @@ AudioPlayer.prototype.checkParams = function(){
         }
         else{
             parsedStop = moment(stop, "YYYY-MM-DD-HH-mm-ss").toDate();
+            if( moment(parsedStop).subtract(parsedStart).days() > 1)
+            {
+                // Clips cannot be greater than 24 hours in length.
+                parsedStop = undefined;
+            }
         }
 
         // Found station.
@@ -136,6 +141,9 @@ AudioPlayer.prototype.mark = function(position){
         {
             alert("Start position must be before end mark.");
         }
+        else if( moment(time).subtract( playerState.markstart).days() > 1){
+            alert("Clips cannot be longer than 24 hours in length.");
+        }        
         else
         {
             playerState.markend = time;
