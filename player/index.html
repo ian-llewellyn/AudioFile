@@ -183,18 +183,39 @@
 						  	<div class="col-xs-12">
 
 				                <div class="btn-group">
-				                  <button  class="btn btn-default btn-sm" type="button" onclick="player.mark('start');">
-				                  	Mark Start <span class="icon rte-icon-mark-start-1"></span>
+				                  <button  class="btn btn-default btn-sm mark" type="button" onclick="player.mark('start');">
+				                  	Mark Start
 				                  </button>
-				                  <button class="btn btn-default btn-sm" type="button" onclick="player.mark('end');">
-				                  	Mark End <span class="icon rte-icon-mark-end"></span>
+				                  <button  class="btn btn-default btn-sm" type="button" onclick="">
+				                  	<span class="icon rte-icon-mark-start-1"></span>
+				                  </button>
+
+				                  <button class="btn btn-default btn-sm mark" type="button" onclick="player.mark('end');">
+				                  	Mark End
+				                  </button>
+				                  <button class="btn btn-default btn-sm" type="button" onclick="">
+				                  	<span class="icon rte-icon-mark-end"></span>
 				                  </button>
 				                </div>
 
 				                <div class="btn-group pull-right">
-				               		<button class="btn btn-default btn-sm" type="button" onclick="player.download();">
+<!-- 				               		<button class="btn btn-default btn-sm" type="button" onclick="player.download();">
 				               			Download <span class="icon rte-icon-fontawesome-webfont"></span>
+				               		</button> -->
+
+				               		<button class="btn btn-default btn-sm dropdown-toggle mark" data-toggle="dropdown" href="#">
+				               			Download <span class="caret"></span></span>
 				               		</button>
+
+									<ul class="dropdown-menu">
+					                  <li><a href="#">Download Hour as MP2 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                  <li><a href="#">Download Hour as MP3 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                  <li><a href="#" class="disabled">Download Clip as MP2 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                  <li><a href="#" class="disabled">Download Clip as MP3 <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                  <li class="divider"></li>
+					                  <li><a href="#">Email link <span class="icon rte-icon-fontawesome-webfont"></span></a></li>
+					                </ul>
+
 				               	</div>
 
 

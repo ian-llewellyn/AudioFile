@@ -127,7 +127,7 @@ line-height: 17px;
   border-right:0;
 }
 
-.mark button {width:212px;}
+.mark button.mark {width:170px;}
 
 
 .btn-group-back {
@@ -161,6 +161,9 @@ line-height: 17px;
   line-height:20px;
 }
 
+.dropdown-menu > li > a.disabled {
+    color: #686868;
+}
 
 /* DATEPICKER
 -------------------------------------------------- */
