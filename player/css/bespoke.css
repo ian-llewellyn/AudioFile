@@ -339,7 +339,7 @@ color: #fff;
   border:3px solid #1C1E22;
 }
 
-.carousel-inner .active li /*a.active*/ {
+.carousel-inner .active li.active_station {
   background:transparent url(../dist/img/bullet-red.png) no-repeat 40px 0 !important;
   padding-top:13px !important;
 }
