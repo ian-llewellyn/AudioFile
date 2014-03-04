@@ -122,3 +122,13 @@
 .rte-icon-fontawesome-webfont:before {
   content: "B";
 }
+.rte-icon-fontawesome-webfont-1:before {
+  content: "C";
+}
+.rte-icon-left-open:before {
+  content: "D";
+}
+.rte-icon-right-open:before {
+  content: "E";
+}
+

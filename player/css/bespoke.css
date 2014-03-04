@@ -334,6 +334,16 @@ color: #fff;
   color:white;  
 }
 
+.thumbnails li.active a {
+  border-radius:10px;
+  border:3px solid #1C1E22;
+}
+
+.carousel-inner .active li /*a.active*/ {
+  background:transparent url(../dist/img/bullet-red.png) no-repeat 40px 0 !important;
+  padding-top:13px !important;
+}
+
 /* CUSTOMIZE THE CAROUSEL
 -------------------------------------------------- */
 
@@ -364,7 +374,7 @@ color: #fff;
 /* TIDY BELOW */
 
 .carousel-indicators {
-  bottom: -15px;
+  bottom: -25px;
 }
 
 #myCarousel ul {
@@ -380,9 +390,30 @@ color: #fff;
   padding: 0;
 }
 
-.carousel-control .glyphicon-chevron-left, .carousel-control .glyphicon-chevron-right {
-  top: 38%;
+.carousel-control .rte-icon-left-open,
+.carousel-control .rte-icon-right-open {
+  position: absolute;
+  top: 50%;
+  z-index: 5;
+  display: inline-block;
 }
+
+.carousel-control .rte-icon-left-open {
+  left: 50%;
+}
+
+.carousel-control .rte-icon-right-open {
+  right: 50%;
+}
+
+.carousel-control .rte-icon-left-open, .carousel-control .rte-icon-right-open {
+  top: 33%;
+  font-size:30px !important;
+}
+
+/*.carousel-control .glyphicon-chevron-left, .carousel-control .glyphicon-chevron-right {
+  top: 38%;
+}*/
 
 .carousel-control {
 width: 0%;
