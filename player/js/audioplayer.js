@@ -25,7 +25,8 @@ var playerDefaults = {
     'stations'             : undefined,
     'defaultFormat'        : 'mp3',
     'trackLengthDefault'   : 3600, // Seconds.
-    'preload'              : undefined
+    'preload'              : undefined,
+    'clipPreviewLength'    : 10 // Seconds
 };
 
 /* Track current player state. */
@@ -110,10 +111,41 @@ AudioPlayer.prototype.checkParams = function(){
 };
 
 /*
-    Play an audio clip specified by params
+    Play first or last 10 seconds of an audio clip assuming we have start || end marked.
+    - mode ( start || end )
 */
-AudioPlayer.prototype.playClip = function(start, end, stationId, date){
+AudioPlayer.prototype.playClipPreview = function(mode){
+    if( mode == "start")
+    {
+        if( playerState.markstart )
+        {
+            playerState.preload = { stop: undefined };
+            playerState.preload.stop = moment(playerState.markstart).add('seconds', playerDefaults.clipPreviewLength).toDate();
 
+            var fileOffset  = moment.utc(playerState.markstart).hour();
+            var minutes     = moment.utc(playerState.markstart).minute();
+            var seconds     = moment.utc(playerState.markstart).second();
+            var skip        = seconds + (minutes * 60);
+            this.getFileList(playerState.station, playerState.markstart, true, fileOffset, skip);
+            playerState.clipMode = true;            
+        }
+    }
+    else if( mode == "end" )
+    {
+        if( playerState.markend )
+        {
+            playerState.preload = { stop: undefined };
+            playerState.preload.stop = playerState.markend;
+            var clipStart = moment(playerState.markstart).subtract('seconds', playerDefaults.clipPreviewLength).toDate();
+
+            var fileOffset  = moment.utc(clipStart).hour();
+            var minutes     = moment.utc(clipStart).minute();
+            var seconds     = moment.utc(clipStart).second();
+            var skip        = seconds + (minutes * 60);
+            this.getFileList(playerState.station, clipStart, true, fileOffset, skip);
+            playerState.clipMode = true;  
+        }
+    }
 };
 
 /*
@@ -141,7 +173,7 @@ AudioPlayer.prototype.mark = function(position){
         {
             alert("Start position must be before end mark.");
         }
-        else if( moment(time).subtract( playerState.markstart).days() > 1){
+        else if( moment(playerState.markstart).diff(time, 'hours') > 24){
             alert("Clips cannot be longer than 24 hours in length.");
         }        
         else
@@ -158,7 +190,7 @@ AudioPlayer.prototype.mark = function(position){
 AudioPlayer.prototype.getDownloadLink = function(service, start, end, format){
 
     start = moment(start).format('YYYY-MM-DD-HH-mm-ss-hh');
-    end = moment(end).format('YYYY-MM-DD-HH-mm-ss-hh');
+    end   = moment(end).format('YYYY-MM-DD-HH-mm-ss-hh');
 
     if(!format || format === undefined){
         format = playerDefaults.defaultFormat;
@@ -239,7 +271,7 @@ AudioPlayer.prototype.download = function(mode,format){
     Convert filename to date object.
 */
 AudioPlayer.prototype.parseFileDate = function(filename) {
-    filename = filename.replace('.mp3','');
+    filename = filename.replace(/.mp[2,3]/g, '');
     return moment.utc(filename,'YYYY-MM-DD-HH-mm-ss-SS').format()
 };
 
@@ -274,7 +306,9 @@ AudioPlayer.prototype.getServices = function() {
                 // Use ICH template to fill a station block.
                 $(blockPrefix + slotTemp).append( ich.stationblock( stations.services[i] ) );
             }
-            playerObj.setStation('radio1','RTÉ Radio 1 FM'); // RTE Radio 1 is our default.  
+            playerObj.setStation('radio1','RTÉ Radio 1 FM'); // RTE Radio 1 is our default.
+            jQuery('li.stationblock').removeClass('active_station');
+            jQuery('#li_' + 'radio1').addClass('active_station');  
             playerState.callbacks.fire('stationsLoaded', playerObj);
         },
         error: function(e) {
@@ -518,7 +552,8 @@ AudioPlayer.prototype.setStation = function(stationid, name) {
         var calendarDate = $( "#datepicker" ).datepicker( "getDate" );
         playerState.station = stationid;
         playerState.stationName = name;
-
+        jQuery('li.stationblock').removeClass('active_station');
+        jQuery('#li_' + playerState.station).addClass('active_station');   
         // We need to be able to switch stations while continuing from the same point in time.
         if(playerState.state == 'PLAYING')
         {
@@ -529,7 +564,7 @@ AudioPlayer.prototype.setStation = function(stationid, name) {
             this.getFileList(stationid, calendarDate, false, false, false);
         }
 
-        $('#station_name').html(playerState.stationName);
+        $('#station_name').html(playerState.stationName);        
     }
 };
 
@@ -561,12 +596,15 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
     playerState.mediaUrl = this.getFileUrl( playerDefaults.defaultFormat, playerState.station, playerState.date, filename);
     this.setMediaSource(playerState.mediaUrl);
     playerState.playDate = player.parseFileDate( playerState.filename );
-    $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );
+    $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );   
     $(this.id).jPlayer('play');
 
     // Highlight selected hour.
     $('.hourblocks').removeClass('navactive');
     $('#hourblock_' + playlistOffset).addClass('navactive');
+    // Set active station
+    jQuery('li.stationblock').removeClass('active_station');
+    jQuery('#li_' + playerState.station).addClass('active_station');       
 };
 
 /*
