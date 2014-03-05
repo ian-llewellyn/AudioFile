@@ -172,7 +172,7 @@ AudioPlayer.prototype.mark = function(position){
         if(playerState.markstart == undefined || moment(playerState.markstart).isAfter( time ) )
         {
             alert("Start position must be before end mark.");
-        }
+        }   
         else if( moment(playerState.markstart).diff(time, 'hours') > 24){
             alert("Clips cannot be longer than 24 hours in length.");
         }        
@@ -180,6 +180,8 @@ AudioPlayer.prototype.mark = function(position){
         {
             playerState.markend = time;
             $('#end-point').html('End: ' + formatted);
+            $('#downloadClipMP2').removeClass('disabled');
+            $('#downloadClipMP3').removeClass('disabled');
         }
     }
 };
@@ -189,10 +191,55 @@ AudioPlayer.prototype.mark = function(position){
     Update download hour tags with the correct paths.
 */
 AudioPlayer.prototype.updateDownloadHourLinks = function(){
-    var mp3Link = playerDefaults.audioUrl + '/mp3/' + playerState.filename;
+
+    var mp3Link = playerDefaults.audioUrl + 'mp3/' + playerState.filename;
     jQuery('#downloadHourMP3').attr('href', mp3Link);
-    jQuery('#downloadHourMP2').attr('href', '');
+    jQuery('#downloadHourMP3').removeClass('disabled');
+    
+    // Set the mailto link for the current hour.
+    this.updateEmailLink(mp3Link);
+
+    var date = moment.utc(playerState.date).format('YYYY-MM-DD');
+    var requestUrl = playerDefaults.filelistUrl + "?service=" + playerState.station + "&date=" + date + "&format=mp2";
+    var playerObj = this;
+    $.ajax({
+       type: 'GET',
+        url: requestUrl,
+        jsonpCallback: 'callback',
+        contentType: "application/json",
+        dataType: 'jsonp',
+        success: function(filelist) {
+            if(filelist){
+                try{
+                    var mp2url = playerDefaults.audioUrl + '/mp2/' + filelist.files[playerState.playlistOffset].file;
+                    jQuery('#downloadHourMP2').attr('href', mp2url);
+                    jQuery('#downloadHourMP2').removeClass('disabled');         
+                }
+                catch(e){
+                    if(debug){ console.log(e.message); }
+                    jQuery('#downloadHourMP2').attr('href', 'javascript:void(0);');
+                    jQuery('#downloadHourMP2').addClass('disabled');                    
+                }
+            }
+        },
+        error: function(e) {
+           if(debug){ console.log(e.message); }
+           jQuery('#downloadHourMP2').attr('href', 'javascript:void(0);');
+           jQuery('#downloadHourMP2').addClass('disabled');
+        }
+    });  
 };
+
+
+/*
+    Update the email link with a reference to the currently playing station and hour.
+*/
+AudioPlayer.prototype.updateEmailLink = function(link){
+    var mailto = "mailto:someone@rte.ie?subject=RTE%20Audioplayer%20Link&body=";
+    mailto += link;
+    jQuery('#mailtolink').attr('href',mailto);
+};
+
 
 /*
     Download an audio file between marked start and end. 
@@ -223,9 +270,9 @@ AudioPlayer.prototype.downloadClip = function(format){
             format = playerDefaults.defaultFormat;
         }
 
-        var title = service + "_" + start + "__" + end;
+        var title = playerState.station + "_" + start + "__" + end;
         var link = playerDefaults.fileDownloadUrl;
-        link += "?service="    + service;
+        link += "?service="    + playerState.station;
         link += "&start="      + start;
         link += "&end="        + end;    
         link += "&format="     + format;
@@ -237,7 +284,9 @@ AudioPlayer.prototype.downloadClip = function(format){
         playerState.markstart = undefined;
         playerState.markend = undefined;
         $('#start-point').empty();
-        $('#end-point').empty();                
+        $('#end-point').empty();          
+        $('#downloadClipMP2').addClass('disabled');
+        $('#downloadClipMP3').addClass('disabled');      
     }
 };
 
@@ -565,6 +614,9 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
     Load a file from the file list as the currently selected media. 
 */
 AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
+    jQuery('#downloadHourMP2').addClass('disabled');
+    jQuery('#downloadHourMP3').addClass('disabled');
+
     playerState.playlistOffset = playlistOffset;
     playerState.filename = filename;
     playerState.mediaUrl = this.getFileUrl( playerDefaults.defaultFormat, playerState.station, playerState.date, filename);
@@ -578,7 +630,9 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
     $('#hourblock_' + playlistOffset).addClass('navactive');
     // Set active station
     jQuery('li.stationblock').removeClass('active_station');
-    jQuery('#li_' + playerState.station).addClass('active_station');       
+    jQuery('#li_' + playerState.station).addClass('active_station');  
+    // Update download links
+    this.updateDownloadHourLinks();     
 };
 
 /*
