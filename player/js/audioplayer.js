@@ -165,6 +165,7 @@ AudioPlayer.prototype.mark = function(position){
         {
             playerState.markstart = time;
             $('#start-point').html('Start: ' + formatted);
+            this.updateEmailLink();
         }
     }
     else if(position == 'end')
@@ -182,6 +183,7 @@ AudioPlayer.prototype.mark = function(position){
             $('#end-point').html('End: ' + formatted);
             $('#downloadClipMP2').removeClass('disabled');
             $('#downloadClipMP3').removeClass('disabled');
+            this.updateEmailLink();
         }
     }
 };
@@ -230,13 +232,33 @@ AudioPlayer.prototype.updateDownloadHourLinks = function(){
     });  
 };
 
+/*
+    Generate an email link
+*/
+AudioPlayer.prototype.makeLink = function(){
+    var baseUrl = location.protocol + '//' + location.host + location.pathname;
+    if(playerState.markstart && playerState.markend){
+        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss");
+        var end = moment(playerState.markend).format("YYYY-MM-DD-HH-mm-ss");
+        baseUrl += "?service=" + playerState.station + "&start=" + start + "&end=" + end;
+    }
+    else if( playerState.markstart ){
+        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss");
+        baseUrl += "?service=" + playerState.station + "&start=" + start;    
+    }
+    else{
+        var start = moment(playerState.playDate).format("YYYY-MM-DD-HH-mm-ss");
+        baseUrl += "?service=" + playerState.station + "&start=" + start;    
+    }
+    return baseUrl;
+};
 
 /*
     Update the email link with a reference to the currently playing station and hour.
 */
 AudioPlayer.prototype.updateEmailLink = function(link){
     var mailto = "mailto:someone@rte.ie?subject=RTE%20Audioplayer%20Link&body=";
-    mailto += link;
+    mailto += this.makeLink();
     jQuery('#mailtolink').attr('href',mailto);
 };
 
@@ -390,7 +412,7 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
             playerState.callbacks.fire('filesLoaded', playerObj);
 
             // Select the first file in the list.
-            playerObj.selectFile(filelist.files[ 0 ].file, 0, false);
+            playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, false);
         },
         error: function(e) {
            if(debug){ console.log(e.message); }
@@ -587,7 +609,7 @@ AudioPlayer.prototype.setStation = function(stationid, name) {
         }
         else
         {
-            this.getFileList(stationid, calendarDate, false, false, false);
+            this.getFileList(stationid, calendarDate, false, 0, 0);
         }
 
         $('#station_name').html(playerState.stationName);        
@@ -608,7 +630,7 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
 
     if(playerState.station !== undefined)
     {
-        this.getFileList(playerState.station, date, autoplay, 0, 0 );
+        this.getFileList(playerState.station, date, autoplay, playerState.playlistOffset, playerState.elapsed );
     }
 };
 
@@ -627,9 +649,13 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset, autoplay) 
     playerState.playDate = player.parseFileDate( playerState.filename );
     $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );  
 
-    if(autoplay){
-        $(this.id).jPlayer('play');
-    }
+    $(this.id).jPlayer('play');
+    // if(autoplay){
+    //     $(this.id).jPlayer('play');
+    // }
+    // else{
+    //     $(this.id).jPlayer('pause');   
+    // }
 
     // Highlight selected hour.
     $('.hourblocks').removeClass('navactive');
