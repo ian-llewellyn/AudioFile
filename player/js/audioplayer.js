@@ -136,7 +136,7 @@ AudioPlayer.prototype.playClipPreview = function(mode){
         {
             playerState.preload = { stop: undefined };
             playerState.preload.stop = playerState.markend;
-            var clipStart = moment(playerState.markstart).subtract('seconds', playerDefaults.clipPreviewLength).toDate();
+            var clipStart = moment(playerState.markend).subtract('seconds', playerDefaults.clipPreviewLength).toDate();
 
             var fileOffset  = moment.utc(clipStart).hour();
             var minutes     = moment.utc(clipStart).minute();
@@ -211,7 +211,7 @@ AudioPlayer.prototype.updateDownloadHourLinks = function(){
         success: function(filelist) {
             if(filelist){
                 try{
-                    var mp2url = playerDefaults.audioUrl + '/mp2/' + filelist.files[playerState.playlistOffset].file;
+                    var mp2url = playerDefaults.audioUrl + 'mp2/' + filelist.files[playerState.playlistOffset].file;
                     jQuery('#downloadHourMP2').attr('href', mp2url);
                     jQuery('#downloadHourMP2').removeClass('disabled');         
                 }
@@ -706,11 +706,12 @@ AudioPlayer.prototype.updateTimer = function(event, playerObj){
         var stopOffset = moment(playerState.playDate).add('seconds', currentTime + 1);
         if( playerState.clipMode && moment( stopOffset ).isAfter( playerState.preload.stop ) )
         {
-            $(playerObj.id).jPlayer('stop');
-            $('#playing_status').html('STOPPED');
+            $(playerObj.id).jPlayer('pause');
+            $('#playing_status').html('PAUSED');
             $('#playbutton').removeClass('rte-icon-play-1'); 
             $('#playbutton').addClass('rte-icon-pause-1'); 
-            playerState.state = "STOPPED";            
+            playerState.state = "PAUSED";      
+            playerState.clipMode = false;      
         }
     }
 };
@@ -784,17 +785,14 @@ AudioPlayer.prototype.init = function() {
     })
     .bind($.jPlayer.event.timeupdate, function(e){ playerObj.updateTimer(e, playerObj);      } )
     .bind($.jPlayer.event.seeking,    function(e){ $('#playing_status').html('BUFFERING..'); } )
-    .bind($.jPlayer.event.seeked,     function(e){ $('#playing_status').html('PLAYING');     } )
+    .bind($.jPlayer.event.seeked,     function(e){ $('#playing_status').html('PLAYING');    } )
     .bind($.jPlayer.event.stalled,    function(e){ $('#playing_status').html('BUFFERING.'); } )
     .bind($.jPlayer.event.play,       function(e){ 
         
         $('#playbutton').removeClass('rte-icon-play-1'); 
         $('#playbutton').addClass('rte-icon-pause-1'); 
-        if(playerState.clipMode){
-            $('#playing_status').html('PLAYING CLIP');
-        }else{
-            $('#playing_status').html('PLAYING');
-        }
+        $('#playing_status').html('PLAYING');
+        
         playerState.state = "PLAYING";
     })
     .bind($.jPlayer.event.pause,      function(e){ 
