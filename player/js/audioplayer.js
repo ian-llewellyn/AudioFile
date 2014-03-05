@@ -405,6 +405,10 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
             if(autoplay && ( listLength >= 1) ){
                 playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, true);
                 $(playerObj.id).jPlayer('play', skip);
+
+                // Highlight selected hour.
+                $('.hourblocks').removeClass('navactive');
+                $('#hourblock_' + fileOffset).addClass('navactive');                
             }
 
             for( var i = 0; i < listLength;  i++)
@@ -415,8 +419,10 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
             }
             playerState.callbacks.fire('filesLoaded', playerObj);
 
-            // Select the first file in the list.
-            playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, false);
+            if(skip == 0 || skip === undefined){
+                // Select the first file in the list.
+                playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, false);
+            }
         },
         error: function(e) {
            if(debug){ console.log(e.message); }
@@ -494,15 +500,37 @@ AudioPlayer.prototype.skip = function(seconds){
 
         // It would be nice to skip back to the previous hour instead - offset.
         if(newTime < 0){
-            newTime = 0;
-        }
+            newTime = 3600 + (playerState.elapsed + seconds);
 
-        // We should skip ahead to next hour + offset.
-        if(newTime >= 3600){
-            newTime = 3600;
-        }
+            if(playerState.playlistOffset == 0){
+                // Need to go back a day;
+                var previousDay = moment( new Date(playerState.playDate) ).subtract('days', 1).format('YYYY-MM-DD');
 
-        $(player.id).jPlayer("play", newTime );
+                playerState.playlistOffset = 23;
+                playerState.date = moment(previousDay).toDate();
+                playerState.playDate = moment(previousDay).toDate();
+                $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
+                $("#datepicker").datepicker("setDate", playerState.playDate );
+                this.getFileList(playerState.station, previousDay, true, playerState.playlistOffset, newTime );
+            }
+            else if(playerState.playlistOffset >= 1){
+                // Go back one hour.
+                var filename = playerState.playlist.files[ playerState.playlistOffset - 1].file;
+                this.selectFile(filename, playerState.playlistOffset - 1, false);
+                $(this.id).jPlayer('play', newTime);
+            }          
+        }
+        else if(newTime >= 3600)
+        {
+            // We should skip ahead to next hour + offset.
+            newTime =  newTime % 3600;
+            playerState.elapsed = 0;
+            this.advancePlaylist( this, newTime);
+            return true;
+        }
+        else{
+            $(player.id).jPlayer("play", newTime );  
+        }
     }
 };
 
@@ -671,56 +699,42 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset, autoplay) 
     this.updateDownloadHourLinks();     
 };
 
+
 /*
     When a file finishs playing we need to advance to the next in our play list.
     Offset lets us start the next or previous day with a given offset.
 */
-AudioPlayer.prototype.advancePlaylist = function(playerObj, offset){
-    var startTime = parseInt(playerState.elapsed,10) + parseInt(offset,10);
-    playerState.playlistOffset = playerState.playlistOffset + 1;
-    var nextDay = moment(playerState.playDate).add('days', 1);
+AudioPlayer.prototype.advancePlaylist = function(playerObj, startTime){
 
-    // Should be between 0 and max elements in playlist.
-    // More than 24 means we need to advance a day.
-    if(playerState.playlistOffset < 24)
+    playerState.playlistOffset++;
+    var playDate = new Date();
+    var nextDay = new Date();
+    playDate.setTime( new Date(playerState.playDate).getTime());
+    nextDay.setTime(playDate.getTime());
+    nextDay = moment(nextDay).add('days', 1);
+    
+    // If there is a next file, play it.
+    if(playerState.playlistOffset < playerState.playlist.files.length)
     {
-        var filename = playerState.playlist.files[ playerState.playlistOffset].file;
+        var filename = playerState.playlist.files[ playerState.playlistOffset ].file;
         playerObj.selectFile(filename, playerState.playlistOffset, true);
-        if(playerState.state != 'PLAYING')
-        {
-            $(playerObj.id).jPlayer('play', startTime);
-        }
+        $(playerObj.id).jPlayer('play', startTime);        
+    } 
+    else if( playerState.playlistOffset >= 24)
+    {
+        playerState.playlistOffset = 0;
+        playerState.date = nextDay.toDate();
+        playerState.playDate = nextDay.toDate();
+        $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
+        $("#datepicker").datepicker("setDate", nextDay.toDate() );
+        playerObj.getFileList(playerState.station, nextDay.toDate(), true, playerState.playlistOffset, startTime );
     }
     else
     {
-        /***** HERE BE DRAGONS *****/
-        // We need to advance to the next day but we also need to be sure that
-        // DST doesn't screw us over. Need to come back and test this. 
-        if( moment(nextDay).isSame( new Date(), 'day' ) )
-        {
-            // If the next day is today, play the previous file. 
-            var filename = playerState.playlist.files[ playerState.playlistOffset - 1].file;
-            playerObj.selectFile(filename, playerState.playlistOffset - 1, true);
-            if(playerState.state != 'PLAYING')
-            {
-                $(playerObj.id).jPlayer('play', startTime);
-            }
-
-        }
-        else if( moment(nextDay).isAfter( new Date(), 'day' ) )
-        {
-            // If the next day is after today.
-            alert("No further programs are available.");
-        }
-        else
-        {
-            // Otherwise advance to the next day.
-            $("#datepicker").datepicker("setDate", moment(nextDay).format('DD/MM/YYYY') );
-            this.changeDate( moment(nextDay).toDate(), true );
-        }
-
+        alert("No further programs are available.");
     }
 };
+
 
 /*
  * Update the time elapsed on the display using the selected hour as an offset.
