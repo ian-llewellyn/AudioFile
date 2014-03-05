@@ -404,11 +404,7 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
             // Handle autoplay function (need one file or more.)
             if(autoplay && ( listLength >= 1) ){
                 playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, true);
-                $(playerObj.id).jPlayer('play', skip);
-
-                // Highlight selected hour.
-                $('.hourblocks').removeClass('navactive');
-                $('#hourblock_' + fileOffset).addClass('navactive');                
+                $(playerObj.id).jPlayer('play', skip);              
             }
 
             for( var i = 0; i < listLength;  i++)
@@ -423,6 +419,10 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
                 // Select the first file in the list.
                 playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, false);
             }
+
+            // Highlight selected hour.
+            $('.hourblocks').removeClass('navactive');
+            $('#hourblock_' + fileOffset).addClass('navactive');              
         },
         error: function(e) {
            if(debug){ console.log(e.message); }
@@ -673,7 +673,6 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
 AudioPlayer.prototype.selectFile = function(filename, playlistOffset, autoplay) {
     jQuery('#downloadHourMP2').addClass('disabled');
     jQuery('#downloadHourMP3').addClass('disabled');
-
     playerState.playlistOffset = playlistOffset;
     playerState.filename = filename;
     playerState.mediaUrl = this.getFileUrl( playerDefaults.defaultFormat, playerState.station, playerState.date, filename);
