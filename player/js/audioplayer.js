@@ -377,7 +377,7 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
 
             // Handle autoplay function (need one file or more.)
             if(autoplay && ( listLength >= 1) ){
-                playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset);
+                playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, true);
                 $(playerObj.id).jPlayer('play', skip);
             }
 
@@ -388,6 +388,9 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
                 $(fileBlockID).append( ich.fileblock( filelist.files[i] ) );
             }
             playerState.callbacks.fire('filesLoaded', playerObj);
+
+            // Select the first file in the list.
+            playerObj.selectFile(filelist.files[ 0 ].file, 0, false);
         },
         error: function(e) {
            if(debug){ console.log(e.message); }
@@ -613,7 +616,7 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
 /*
     Load a file from the file list as the currently selected media. 
 */
-AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
+AudioPlayer.prototype.selectFile = function(filename, playlistOffset, autoplay) {
     jQuery('#downloadHourMP2').addClass('disabled');
     jQuery('#downloadHourMP3').addClass('disabled');
 
@@ -622,8 +625,11 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset) {
     playerState.mediaUrl = this.getFileUrl( playerDefaults.defaultFormat, playerState.station, playerState.date, filename);
     this.setMediaSource(playerState.mediaUrl);
     playerState.playDate = player.parseFileDate( playerState.filename );
-    $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );   
-    $(this.id).jPlayer('play');
+    $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );  
+
+    if(autoplay){
+        $(this.id).jPlayer('play');
+    }
 
     // Highlight selected hour.
     $('.hourblocks').removeClass('navactive');
@@ -649,7 +655,7 @@ AudioPlayer.prototype.advancePlaylist = function(playerObj, offset){
     if(playerState.playlistOffset < 24)
     {
         var filename = playerState.playlist.files[ playerState.playlistOffset].file;
-        playerObj.selectFile(filename, playerState.playlistOffset);
+        playerObj.selectFile(filename, playerState.playlistOffset, true);
         if(playerState.state != 'PLAYING')
         {
             $(playerObj.id).jPlayer('play', startTime);
@@ -664,7 +670,7 @@ AudioPlayer.prototype.advancePlaylist = function(playerObj, offset){
         {
             // If the next day is today, play the previous file. 
             var filename = playerState.playlist.files[ playerState.playlistOffset - 1].file;
-            playerObj.selectFile(filename, playerState.playlistOffset - 1);
+            playerObj.selectFile(filename, playerState.playlistOffset - 1, true);
             if(playerState.state != 'PLAYING')
             {
                 $(playerObj.id).jPlayer('play', startTime);
