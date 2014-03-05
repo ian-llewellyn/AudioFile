@@ -194,7 +194,9 @@ AudioPlayer.prototype.mark = function(position){
 */
 AudioPlayer.prototype.updateDownloadHourLinks = function(){
 
-    var mp3Link = playerDefaults.audioUrl + 'mp3/' + playerState.filename;
+    var mp3Link = playerDefaults.audioUrl + 'mp3/' + playerState.station + "/";
+    mp3Link += moment.utc(playerState.date).format('YYYY-MM-DD') + "/" + playerState.filename;
+
     jQuery('#downloadHourMP3').attr('href', mp3Link);
     jQuery('#downloadHourMP3').removeClass('disabled');
     
@@ -213,7 +215,9 @@ AudioPlayer.prototype.updateDownloadHourLinks = function(){
         success: function(filelist) {
             if(filelist){
                 try{
-                    var mp2url = playerDefaults.audioUrl + 'mp2/' + filelist.files[playerState.playlistOffset].file;
+                    var mp2url = playerDefaults.audioUrl + 'mp2/' + playerState.station + "/";
+                    mp2url += moment.utc(playerState.date).format('YYYY-MM-DD') + "/" + filelist.files[playerState.playlistOffset].file;
+
                     jQuery('#downloadHourMP2').attr('href', mp2url);
                     jQuery('#downloadHourMP2').removeClass('disabled');         
                 }
