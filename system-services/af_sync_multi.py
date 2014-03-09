@@ -7,9 +7,9 @@ Usage:
   af_sync_multi.py [stop|reload|status|fullstatus] [options]
 
   -p, --params=<params_file>  The parameters file to load.
-                              [default: af-sync.conf]
+                              [default: /etc/af-sync.d/af-sync.conf]
   -c, --config=<config_file>  The multi instance configuration file to load.
-                              [default: af-sync-multi.conf]
+                              [default: /etc/af-sync.d/af-sync-multi.conf]
   -d, --date=<date>           Only process files on this date (Format: YYYY-mm-dd).
                               This option has no effect in the third usage pattern.
   -n, --noop                  Skip file operations.
@@ -20,18 +20,11 @@ __version__ = '0.2'
 import logging, os
 
 # DEFAULTS
-#DEFAULT_MULTI_INSTANCE_CONFIG_FILE = '/etc/af-sync.d/af-sync-multi.conf'
-#DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
-#DEFAULT_MAIN_LOOP_MIN_TIME = 750
 DEFAULT_LOG_PATH = '/var/log/audiofile'
 DEFAULT_LOG_LEVEL = logging.INFO
-DEFAULT_CONTROL_PORT = 1111
+DEFAULT_CONTROL_PORT = 12345
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.StreamHandler())
-logger.level = logging.DEBUG
-
-from af_sync_single import AFSingle, load_params, DEFAULT_MAIN_LOOP_MIN_TIME
+from af_sync_single import AFSingle, load_params
 import socket, thread
 
 class ConfigItem(dict):
@@ -104,7 +97,7 @@ class Configuration(set):
                     formats = [formats]
                 for fmt in formats:
                     logger.debug('Adding configuration for %s, %s, %s, %s' % \
-                        (host, service, format, map_file))
+                        (host, service, fmt, map_file))
                     self.add(ConfigItem(
                         {'host': host, 'service': service,
                          'format': fmt, 'date': date,
@@ -233,7 +226,10 @@ class AFMultiServer(object):
         self.host = socket.gethostname()
         if params is None:
             params = {}
-        self.port = params['control_port'] or DEFAULT_CONTROL_PORT
+        try:
+            self.port = params['control_port']
+        except KeyError:
+            self.port = DEFAULT_CONTROL_PORT
         #self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             self.connect()
@@ -291,7 +287,10 @@ class AFMultiClient(object):
         configured AFMulti instance.
         """
         super(AFMultiClient, self).__init__()
-        self.control_port = params['control_port'] or DEFAULT_CONTROL_PORT
+        try:
+            self.control_port = params['control_port']
+        except KeyError:
+            self.control_port = DEFAULT_CONTROL_PORT
         self.socket = None
         self.connected = False
         if connect:
@@ -359,11 +358,10 @@ if __name__ == '__main__':
             command = 'start'
             foreground = True
 
+    import sys
     if command != 'start':
         # command in ['stop', 'restart', 'reload', 'status']:
         # - load AFMultiClient class, send message to server and exit
-        import sys
-
         client = AFMultiClient(params)
 
         if not client.connected:
@@ -378,6 +376,13 @@ if __name__ == '__main__':
         print output
 
         sys.exit(code)
+
+    logger = logging.getLogger(__name__)
+    logger.addHandler(logging.FileHandler(params['log_path'] \
+        + '/af-sync-multi.log'))
+    logger.handlers[0].setFormatter(logging.Formatter(fmt='%(asctime)s ' \
+        '[%(process)d] [%(levelname)s] Line: %(lineno)d: %(message)s'))
+    logger.level = logging.DEBUG
 
     # Start program proper
     logger.info('Starting AFMulti process')
@@ -400,13 +405,22 @@ if __name__ == '__main__':
         pid = os.fork()
         if pid > 0:
             # This is the parent
-            logger.info('Parent exiting.')
+            logger.info('Child started with PID: %d. Parent exiting.' % pid)
             sys.exit(os.EX_OK)
+        elif pid < 0:
+            logger.critical('Failed to fork() child process - exiting!')
+            sys.exit(os.EX_OSERR)
+        # This is the child
+        logger.info('Child successfully fork()ed.')
 
-    logger.info('Child successfully fork()ed.')
+    # Initiate AFMultiServer
+    try:
+        multi_server = AFMultiServer(params)
+    except:
+        sys.exit(os.EX_TEMPFAIL)
 
-    # Start communications interface thread
-    thread.start_new_thread(AFMultiServer(params).run, ())
+    # Start AFMultiServer thread
+    thread.start_new_thread(multi_server.run, ())
 
     import datetime, time
 
@@ -423,4 +437,5 @@ if __name__ == '__main__':
         if now < next_run_time:
             sleep_time = (next_run_time - now).seconds + \
                          (next_run_time - now).microseconds / 1000000.0
+            logger.info('Main loop sleeping for %f seconds' % sleep_time)
             time.sleep(sleep_time)

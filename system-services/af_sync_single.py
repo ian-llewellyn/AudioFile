@@ -22,10 +22,8 @@ __version__ = '0.2'
 import logging
 
 # DEFAULTS
-#DEFAULT_PARAMS_FILE = '/etc/af-sync.d/af-sync.conf'
 DEFAULT_LOG_PATH = '/var/log/audiofile'
 DEFAULT_LOG_LEVEL = logging.DEBUG
-DEFAULT_INTER_DELTA_MIN_TIME = 1250
 DEFAULT_DELTA_RETRIES = 2
 DEFAULT_NO_PROGRESS_MAX_WAIT = 120000
 DEFAULT_MAIN_LOOP_MIN_TIME = 750
@@ -116,7 +114,9 @@ class AFSingle(set):
 
         self.logger = logging.getLogger('.'.join(['af-sync',
             self.service, self.format]))
-        self.logger.addHandler(logging.StreamHandler())
+        #self.logger.addHandler(logging.StreamHandler())
+        self.logger.addHandler(logging.FileHandler(self.log_path + '/af-sync-' \
+            + self.service + '-' + self.format + '.log'))
         self.logger.level = self.log_level
         self.logger.info('Initialised %s %s' % (self.service, self.format))
         self.logger.debug('Host: %s, Date: %s, Map File: %s' % (self.host,
@@ -469,7 +469,11 @@ def load_params(params_file):
 
     except IOError:
         # Params file not found, using built-in defaults.
-        pass
+        #logger.warning('Using built-in defaults. Params file cannot be read:',
+        #    params_file)
+        for key in globals().keys():
+            if key.startswith('DEFAULT_'):
+                params[key[8:]] = globals()[key]
 
     keys = params.keys()
     for key in keys:
@@ -498,8 +502,9 @@ if __name__ == '__main__':
 
         single.step()
 
-        if datetime.datetime.now() < next_run_time:
-            sleep_time = (next_run_time - datetime.datetime.now()).microseconds() / 1000000.0
-            single.logger.info('main loop is executing too quickly, '
-                'sleeping for %f seconds' % sleep_time)
+        now = datetime.datetime.now()
+        if now < next_run_time:
+            sleep_time = (next_run_time - now).seconds + \
+                         (next_run_time - now).microseconds / 1000000.0
+            single.logger.info('Main loop sleeping for %f seconds' % sleep_time)
             time.sleep(sleep_time)
