@@ -16,6 +16,7 @@ should all produce a link to the final time PIP at 07:00 local time:
 click on a date for which there are no audios. A bug surfaces that is difficult
 to recover from. I would expect the hours list to simply be empty.
 [ ] Download !clip! links should not need target="_blank"
+[ ] "No further programs are available" - player should simply stop.
 
 Low priority
 ============
