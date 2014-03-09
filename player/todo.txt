@@ -17,9 +17,12 @@ click on a date for which there are no audios. A bug surfaces that is difficult
 to recover from. I would expect the hours list to simply be empty.
 [ ] Download !clip! links should not need target="_blank"
 [ ] "No further programs are available" - player should simply stop.
+[ ] "This program is currently unavailable." error is displayed after clicking
+on the email link.
 
 Low priority
 ============
 [ ] When switching days, the list index of the hour is used to resume playing
 at the same time another day - time should be used.
-
+[ ] Update hrefs at relevant times rather than relying on a javascript call
+when the link is clicked.
