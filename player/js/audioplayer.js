@@ -18,10 +18,10 @@ function getParameterByName(name) {
 /* Defaults that the player will use. */
 var playerDefaults = {
 	'startTrack'           : 'audio/sweet_dreams.mp3',
-    'stationsUrl'          : 'http://audiofile.rte.ie/webservice/v3/listservices.php',
-    'filelistUrl'          : 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
-    'fileDownloadUrl'      : 'http://audiofile.rte.ie/webservice/v3/download.php',
-    'audioUrl'             : 'http://audiofile.rte.ie/audio/',
+    'stationsUrl'          : '/webservice/v3/listservices.php',
+    'filelistUrl'          : '/webservice/v3/listfiles.php',
+    'fileDownloadUrl'      : '/webservice/v3/download.php',
+    'audioUrl'             : '/audio/',
     'stations'             : undefined,
     'defaultFormat'        : 'mp3',
     'trackLengthDefault'   : 3600, // Seconds.
