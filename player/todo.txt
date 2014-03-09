@@ -1,1 +1,24 @@
 # To Do #
+[ ] "radio1" hardcoded as default service - change to first service in listservices.php
+[ ] Services carousel has 'pages' hardcoded by the looks of things.
+[ ] When calling the player with start and end query string params, they should have hundredths of a second also - even if they are ignored by this implementation.
+[ ] Email links should be created with the hundredths of a second too.
+[ ] Test times during IST (early October 2013) - email links should still be
+UTC and query string should accept these. As a help, these query strings
+should all produce a link to the final time PIP at 07:00 local time:
+?service=radio1&start=2013-10-01-06-00-00-00
+?service=radio1lw&start=2013-10-02-06-00-00-00
+?service=radio1&start=2013-10-31-07-00-00-00&end=2013-10-31-18-00-00-00
+[ ] "Start position must be before end mark" - should clear other (start/end) mark instead.
+[ ] Volume and Service to be 'remembered' in cookies
+[ ] Passing service in as query string param should choose that service.
+[ ] "This program is currently unavailable" - go back more than six months and
+click on a date for which there are no audios. A bug surfaces that is difficult
+to recover from. I would expect the hours list to simply be empty.
+[ ] Download !clip! links should not need target="_blank"
+
+Low priority
+============
+[ ] When switching days, the list index of the hour is used to resume playing
+at the same time another day - time should be used.
+
