@@ -355,9 +355,9 @@ AudioPlayer.prototype.getServices = function() {
                 // Use ICH template to fill a station block.
                 $(blockPrefix + slotTemp).append( ich.stationblock( stations.services[i] ) );
             }
-            playerObj.setStation('radio1','RTÉ Radio 1 FM'); // RTE Radio 1 is our default.
+            playerObj.setStation(stations.services[0].id,stations.services[0].title); // The first service returned is our default.
             jQuery('li.stationblock').removeClass('active_station');
-            jQuery('#li_' + 'radio1').addClass('active_station');  
+            jQuery('#li_' + stations.services[0].id).addClass('active_station');  
             playerState.callbacks.fire('stationsLoaded', playerObj);
         },
         error: function(e) {
