@@ -18,10 +18,10 @@ function getParameterByName(name) {
 /* Defaults that the player will use. */
 var playerDefaults = {
 	'startTrack'           : 'audio/sweet_dreams.mp3',
-    'stationsUrl'          : '/webservice/v3/listservices.php',
-    'filelistUrl'          : '/webservice/v3/listfiles.php',
-    'fileDownloadUrl'      : '/webservice/v3/download.php',
-    'audioUrl'             : '/audio/',
+    'stationsUrl'          : 'http://audiofile.rte.ie/webservice/v3/listservices.php',
+    'filelistUrl'          : 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
+    'fileDownloadUrl'      : 'http://audiofile.rte.ie/webservice/v3/download.php',
+    'audioUrl'             : 'http://audiofile.rte.ie/audio/',
     'stations'             : undefined,
     'defaultFormat'        : 'mp3',
     'trackLengthDefault'   : 3600, // Seconds.
@@ -261,8 +261,8 @@ AudioPlayer.prototype.makeLink = function(){
     Update the email link with a reference to the currently playing station and hour.
 */
 AudioPlayer.prototype.updateEmailLink = function(link){
-    var mailto = "mailto:someone@rte.ie?subject=RTE%20Audioplayer%20Link&body=";
-    mailto += this.makeLink();
+    var mailto = "mailto:?subject=RTE%20AudioFile%20Player%20Link&body=";
+    mailto += encodeURIComponent(this.makeLink());
     jQuery('#mailtolink').attr('href',mailto);
 };
 
