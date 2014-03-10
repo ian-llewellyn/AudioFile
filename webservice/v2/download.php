@@ -16,16 +16,18 @@ date_default_timezone_set('UTC');
 // 3 - operations
 // 4 - operations incl. repeated ones
 // 5 - lots of info
-$log_level = 2;
+$log_level = 5;
+$log_file = '/var/log/audiofile/download.log';
 
 // Logging function
 function log_message($msg_level, $msg, $bare_log = false) {
-	global $log_level;
+	global $log_level, $log_file;
 
 	// Should this go any further
 	if ($log_level < $msg_level) return true;
 	// open file
-	$fd = fopen(dirname($_SERVER['SCRIPT_FILENAME']) . '/download.log', 'a');
+	#$fd = fopen(dirname($_SERVER['SCRIPT_FILENAME']) . '/download.log', 'a');
+	$fd = fopen($log_file, 'a');
 	if (!$fd) return false;
 	// append date/time to message
 	$str = ($bare_log === false ? '[' . date('Y/m/d H:i:s T', mktime()) . '] ' . $_SERVER['REMOTE_ADDR'] . ' [' . $msg_level . '] ' : '') . $msg;
@@ -202,6 +204,14 @@ function get_time_diff($date_time1, $date_time2) {
 	return round($days_diff*3600*24 + $time_diff, 2);
 }
 
+$early_exit = true;
+function shutdown_function() {
+	global $early_exit;
+	if ( $early_exit === true ) {
+		log_message(2, "Web service exited early");
+	}
+}
+register_shutdown_function('shutdown_function');
 // Here's the science!!
 /*
  * a - the start date_time of the first useful file 
@@ -244,8 +254,10 @@ $files = $file_a != $file_y ? get_intermediate_files($file_a, $file_y) : array()
 $cmd = "$mpgsplice -";
 log_message(4, 'Command line: ' . $cmd);
 
-$edit_list = "$rotter_base_dir$service/$start_date/$file_a $offset_start";
-log_message(4, "Edit list: $rotter_base_dir$service/$start_date/$file_a $offset_start", true);
+preg_match('/^\d{4}-\d{2}-\d{2}/', $file_a, $matches);
+$file_date = $matches[0];
+$edit_list = "$rotter_base_dir$service/$file_date/$file_a $offset_start";
+log_message(4, "Edit list: $rotter_base_dir$service/$file_date/$file_a $offset_start", true);
 if ( $file_a != $file_y ) {
 	// Start and end are in different files
 	// Process Intermediate files
@@ -258,8 +270,10 @@ if ( $file_a != $file_y ) {
 	}
 
 	// Because the end is in a different file to the beginning, we must restart it's editspec
-	$edit_list .= "\n$rotter_base_dir$service/$end_date/$file_y 0";
-	log_message(4, "Edit list: $rotter_base_dir$service/$end_date/$file_y 0", true);
+	preg_match('/^\d{4}-\d{2}-\d{2}/', $file_y, $matches);
+	$file_date = $matches[0];
+	$edit_list .= "\n$rotter_base_dir$service/$file_date/$file_y 0";
+	log_message(4, "Edit list: $rotter_base_dir$service/$file_date/$file_y 0", true);
 }
 $edit_list .= " $offset_end";
 log_message(4, "\t:  $offset_end", true);
@@ -310,7 +324,11 @@ $env = array('some_option' => 'aeiou');
 log_message(2, 'Executing: ' . $cmd);
 $process = proc_open($cmd, $descriptorspec, $pipes, $cwd, $env);
 
-if ( !is_resource($process) ) die('proc_open() failed');
+if ( !is_resource($process) ) {
+	header('HTTP/1.1 500 Internal Server Error');
+        log_message(1, 'proc_open() failed: Service: ' . $service . ' Start: ' . $request_start . ' End: ' . $request_end);
+	die('proc_open() failed');
+}
 
 // $pipes now looks like this:
 // 0 => writeable handle connected to child stdin
@@ -347,5 +365,7 @@ if ($return_value != 0) {
 } else {
 	log_message(3, $stderr, true);
 }
+
+$early_exit = false;
 
 ?>
