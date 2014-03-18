@@ -4,3 +4,4 @@
 [ ] Restart force stops existing process and restarts
     [x] - in the background if it was previously in the background
 [x] Date and Time in log records
+[ ] Log tracebacks
