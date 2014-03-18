@@ -117,6 +117,8 @@ class AFSingle(set):
         #self.logger.addHandler(logging.StreamHandler())
         self.logger.addHandler(logging.FileHandler(self.log_path + '/af-sync-' \
             + self.service + '-' + self.format + '.log'))
+        self.logger.handlers[0].setFormatter(logging.Formatter(fmt='%(asctime)s ' \
+            '[%(process)d] [%(levelname)s] Line: %(lineno)d: %(message)s'))
         self.logger.level = self.log_level
         self.logger.info('Initialised %s %s' % (self.service, self.format))
         self.logger.debug('Host: %s, Date: %s, Map File: %s' % (self.host,

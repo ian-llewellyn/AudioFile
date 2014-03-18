@@ -17,7 +17,7 @@ Usage:
 """
 __version__ = '0.2'
 
-import logging, os
+import logging, os, sys
 
 # DEFAULTS
 DEFAULT_LOG_PATH = '/var/log/audiofile'
@@ -213,6 +213,18 @@ class AFMulti(set):
 
         return (code, output) # 1 = reload required
 
+    def foreground(self):
+        """
+        Returns true if the process is running in the foregound.
+        """
+        return (os.EX_OK, str(foreground))
+
+    def pid(self):
+        """
+        Return the PID of this process
+        """
+        return (os.EX_OK, str(os.getpid()))
+
 class AFMultiServer(object):
     """
     The AFMultiServer class will be started along with and instance
@@ -358,7 +370,6 @@ if __name__ == '__main__':
             command = 'start'
             foreground = True
 
-    import sys
     if command != 'start':
         # command in ['stop', 'restart', 'reload', 'status']:
         # - load AFMultiClient class, send message to server and exit
@@ -369,13 +380,32 @@ if __name__ == '__main__':
                 'not running.'
             sys.exit(1)
 
-        code, output = client.communicate(command)
-        client.disconnect()
+        if command == 'restart':
+            # Determine if we have to restart in the background, foreground, or not at all.
+            code, foreground = client.communicate('foreground')
+            client.disconnect()
 
-        # Show what we got
-        print output
+            foreground = foreground == 'True'
 
-        sys.exit(code)
+            client.connect()
+            code, pid = client.communicate('pid')
+            client.disconnect()
+
+            client.connect()
+            client.communicate('stop')
+            client.disconnect()
+
+            import signal
+            os.kill(int(pid), signal.SIGTERM)
+
+        else:
+            code, output = client.communicate(command)
+            client.disconnect()
+
+            # Show what we got
+            print output
+
+            sys.exit(code)
 
     logger = logging.getLogger(__name__)
     logger.addHandler(logging.FileHandler(params['log_path'] \
@@ -401,7 +431,6 @@ if __name__ == '__main__':
     # Fork at this point
     if not foreground:
         logger.info('Daemonising...')
-        import os
         pid = os.fork()
         if pid > 0:
             # This is the parent
@@ -410,13 +439,14 @@ if __name__ == '__main__':
         elif pid < 0:
             logger.critical('Failed to fork() child process - exiting!')
             sys.exit(os.EX_OSERR)
-        # This is the child
+        # pid == 0 - This is the child
         logger.info('Child successfully fork()ed.')
 
     # Initiate AFMultiServer
     try:
         multi_server = AFMultiServer(params)
     except:
+        logger.critical('Encountered a problem initiating AFMultiServer')
         sys.exit(os.EX_TEMPFAIL)
 
     # Start AFMultiServer thread

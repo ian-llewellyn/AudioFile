@@ -1,6 +1,6 @@
-[ ] Daemonise when start command is used
+[x] Daemonise when start command is used
 [ ] Params from file override compiled in defaults
 [ ] Runs without params file
 [ ] Restart force stops existing process and restarts
-    [ ] - in the background if it was previously in the background
-
+    [x] - in the background if it was previously in the background
+[x] Date and Time in log records
