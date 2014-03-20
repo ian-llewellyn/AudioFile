@@ -17,11 +17,11 @@ function getParameterByName(name) {
 
 /* Defaults that the player will use. */
 var playerDefaults = {
-	'startTrack'           : 'audio/sweet_dreams.mp3',
-    'stationsUrl'          : '/webservice/v3/listservices.php',
-    'filelistUrl'          : '/webservice/v3/listfiles.php',
-    'fileDownloadUrl'      : '/webservice/v3/download.php',
-    'audioUrl'             : '/audio/',
+	'startTrack'           : '',
+    'stationsUrl'          : 'http://audiofile.rte.ie/webservice/v3/listservices.php',
+    'filelistUrl'          : 'http://audiofile.rte.ie/webservice/v3/listfiles.php',
+    'fileDownloadUrl'      : 'http://audiofile.rte.ie/webservice/v3/download.php',
+    'audioUrl'             : 'http://audiofile.rte.ie/audio/',
     'stations'             : undefined,
     'defaultFormat'        : 'mp3',
     'trackLengthDefault'   : 3600, // Seconds.
@@ -47,7 +47,8 @@ var playerState = {
     'markstart'     : undefined,
     'markend'       : undefined,
     'callbacks'     : undefined,
-    'clipMode'      : false
+    'clipMode'      : false,
+    'mailto'        : undefined
 };
 
 /* 
@@ -55,7 +56,7 @@ var playerState = {
 */
 function AudioPlayer(id){
 	this.id = id;
-    this.init();
+    this.init(); 
 }
 
 /*
@@ -71,12 +72,13 @@ AudioPlayer.prototype.checkParams = function(){
     var service = getParameterByName('service');
     var stop    = getParameterByName('end');
 
+    // If we have start and end. 
     if(start !== undefined && service !== undefined){
 
         // Valid start timestamp (required field)
-        var parsedStart = moment(start, "YYYY-MM-DD-HH-mm-ss", true).isValid();
+        var parsedStart = moment.utc(start, "YYYY-MM-DD-HH-mm-ss-SS", true).isValid();
         if(!parsedStart){   return false;   }
-        parsedStart = moment(start, "YYYY-MM-DD-HH-mm-ss").toDate();
+        parsedStart = moment.utc(start, "YYYY-MM-DD-HH-mm-ss-SS").toDate();
 
         // If start date is in the future (ie greater than new Date())
         if( moment.utc(parsedStart).isAfter( new Date() ) ){
@@ -85,12 +87,12 @@ AudioPlayer.prototype.checkParams = function(){
         }
         
         // Parse stop timestamp if valid. Leave undefined otherwise as it is not strictly needed. 
-        var parsedStop = moment(stop, "YYYY-MM-DD-HH-mm-ss", true).isValid();
+        var parsedStop = moment.utc(stop, "YYYY-MM-DD-HH-mm-ss-SS", true).isValid();
         if(!parsedStop){    
             parsedStop = undefined;
         }
         else{
-            parsedStop = moment(stop, "YYYY-MM-DD-HH-mm-ss").toDate();
+            parsedStop = moment.utc(stop, "YYYY-MM-DD-HH-mm-ss-SS").toDate();
             if( moment(parsedStop).subtract(parsedStart).days() > 1)
             {
                 // Clips cannot be greater than 24 hours in length.
@@ -103,6 +105,16 @@ AudioPlayer.prototype.checkParams = function(){
             'stationid' : service,
             'start'     : parsedStart,
             'stop'      : parsedStop
+        };
+    }
+    else if(service !== undefined)
+    {
+        // We fake our start date as today at 00:00:00.
+        var start = moment.utc( new Date().toDateString() ).toDate();
+        return { 
+            'stationid' : service,
+            'start'     : start,
+            'stop'      : undefined
         };
     }
     else{
@@ -242,16 +254,16 @@ AudioPlayer.prototype.updateDownloadHourLinks = function(){
 AudioPlayer.prototype.makeLink = function(){
     var baseUrl = location.protocol + '//' + location.host + location.pathname;
     if(playerState.markstart && playerState.markend){
-        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss");
-        var end = moment(playerState.markend).format("YYYY-MM-DD-HH-mm-ss");
+        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss-SS");
+        var end = moment(playerState.markend).format("YYYY-MM-DD-HH-mm-ss-SS");
         baseUrl += "?service=" + playerState.station + "&start=" + start + "&end=" + end;
     }
     else if( playerState.markstart ){
-        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss");
+        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss-SS");
         baseUrl += "?service=" + playerState.station + "&start=" + start;    
     }
     else{
-        var start = moment(playerState.playDate).format("YYYY-MM-DD-HH-mm-ss");
+        var start = moment(playerState.playDate).format("YYYY-MM-DD-HH-mm-ss-SS");
         baseUrl += "?service=" + playerState.station + "&start=" + start;    
     }
     return baseUrl;
@@ -263,9 +275,16 @@ AudioPlayer.prototype.makeLink = function(){
 AudioPlayer.prototype.updateEmailLink = function(link){
     var mailto = "mailto:?subject=RTE%20AudioFile%20Player%20Link&body=";
     mailto += encodeURIComponent(this.makeLink());
-    jQuery('#mailtolink').attr('href',mailto);
+    playerState.mailto = mailto;
 };
 
+/*
+    Open a hidden iframe with the mailto so we don't mess with the player.
+*/
+AudioPlayer.prototype.openMailLink = function(){
+    jQuery('<iframe src="mailto:' + playerState.mailto + '">').appendTo('#mailIframe').css("display", "none");
+};
+    
 
 /*
     Download an audio file between marked start and end. 
@@ -289,8 +308,8 @@ AudioPlayer.prototype.downloadClip = function(format){
     else if( moment(playerState.markstart).isBefore( playerState.markend ) )
     {
         // Download.
-        start = moment(playerState.markstart).format('YYYY-MM-DD-HH-mm-ss-hh');
-        end   = moment(playerState.markend).format('YYYY-MM-DD-HH-mm-ss-hh');
+        start = moment(playerState.markstart).format('YYYY-MM-DD-HH-mm-ss-SS');
+        end   = moment(playerState.markend).format('YYYY-MM-DD-HH-mm-ss-SS');
 
         if(!format || format === undefined){
             format = playerDefaults.defaultFormat;
@@ -355,9 +374,24 @@ AudioPlayer.prototype.getServices = function() {
                 // Use ICH template to fill a station block.
                 $(blockPrefix + slotTemp).append( ich.stationblock( stations.services[i] ) );
             }
-            playerObj.setStation(stations.services[0].id,stations.services[0].title); // The first service returned is our default.
+
             jQuery('li.stationblock').removeClass('active_station');
-            jQuery('#li_' + stations.services[0].id).addClass('active_station');  
+            var stationid = stations.services[0].id;
+            var stationtitle = stations.services[0].title;
+
+            // If we have a service param, we need to use that instead.
+            if(playerState.station !== undefined){
+                stationid = playerState.station;
+                for(var i = 0; i < stations.services.length; i++){
+                    if(stations.services[i].id == stationid){
+                        stationtitle = stations.services[i].title;
+                        break;
+                    }
+                }
+            }
+
+            playerObj.setStation(stationid, stationtitle); // The first service returned is our default.
+            jQuery('#li_' + stationid).addClass('active_station');              
             playerState.callbacks.fire('stationsLoaded', playerObj);
         },
         error: function(e) {
@@ -704,7 +738,6 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset, autoplay) 
     Offset lets us start the next or previous day with a given offset.
 */
 AudioPlayer.prototype.advancePlaylist = function(playerObj, startTime){
-
     playerState.playlistOffset++;
     var playDate = new Date();
     var nextDay = new Date();
@@ -730,7 +763,7 @@ AudioPlayer.prototype.advancePlaylist = function(playerObj, startTime){
     }
     else
     {
-        alert("No further programs are available.");
+        $(playerObj.id).jPlayer('stop');    
     }
 };
 
