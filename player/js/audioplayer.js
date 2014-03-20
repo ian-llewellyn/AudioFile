@@ -7,6 +7,9 @@
 // Are we in debug mode?
 var debug = true;
 
+// All JSON cookies 
+$.cookie.json = true;
+
 /* Get a named parameter that may have been passed in the URL string */
 function getParameterByName(name) {
     name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
@@ -26,7 +29,9 @@ var playerDefaults = {
     'defaultFormat'        : 'mp3',
     'trackLengthDefault'   : 3600, // Seconds.
     'preload'              : undefined,
-    'clipPreviewLength'    : 10 // Seconds
+    'clipPreviewLength'    : 10, // Seconds,
+    'cookieExpire'         : 30, // days
+    'cookieName'           : 'audioplayer'
 };
 
 /* Track current player state. */
@@ -34,9 +39,9 @@ var playerState = {
     'station'       : undefined,
     'stationName'   : undefined,
     'filename'      : undefined,
-    'date'          : new Date(),         // Date selected by cal widget.
+    'date'          : new Date(),   // Date selected by cal widget.
     'mediaUrl'      : undefined,
-    'playDate'      : undefined,      // Current date we are playing.
+    'playDate'      : undefined,    // Current date we are playing.
     'state'         : 'STOPPED',
     'elapsed'       : undefined,
     'playSpeed'     : 1,
@@ -48,7 +53,10 @@ var playerState = {
     'markend'       : undefined,
     'callbacks'     : undefined,
     'clipMode'      : false,
-    'mailto'        : undefined
+    'mailto'        : undefined,
+    'playFaults'    : 0,            // Count the number of failed attempts to play.
+                                    // Each successful play clears this count. 
+    'maxFaults'     : 3             // Max attempts to play before we stop play back.
 };
 
 /* 
@@ -66,33 +74,55 @@ function AudioPlayer(id){
       stop timestamp is undefined if unavailable or could not be parsed.
 */
 AudioPlayer.prototype.checkParams = function(){
+    var start       = getParameterByName('start');
+    var service     = getParameterByName('service');
+    var stop        = getParameterByName('end');
 
-    // We need these three to play
-    var start   = getParameterByName('start');
-    var service = getParameterByName('service');
-    var stop    = getParameterByName('end');
+    var parsedStart = undefined;
+    var parsedStop  = undefined;
 
-    // If we have start and end. 
-    if(start !== undefined && service !== undefined){
+    // If we have start or service. 
+    if(start !== undefined || service !== undefined){
 
-        // Valid start timestamp (required field)
-        var parsedStart = moment.utc(start, "YYYY-MM-DD-HH-mm-ss-SS", true).isValid();
-        if(!parsedStart){   return false;   }
-        parsedStart = moment.utc(start, "YYYY-MM-DD-HH-mm-ss-SS").toDate();
+        if(start){
+            // Valid start timestamp (required field)
+            var validStart = start.match(/^(\d{4})-(\d{1,2})-(\d{1,2})-(\d{1,2})-(\d{1,2})-(\d{1,2})-(\d{1,2})$/);        
+            if(validStart == null || validStart === undefined){
+                parsedStart = undefined;
+            }
+            else{
+                parsedStart = moment.utc(start, "YYYY-MM-DD-HH-mm-ss-SS", true).isValid();
+                if(!parsedStart){   
+                    parsedStart = undefined;   
+                }
+                else{
+                    parsedStart = moment.utc(start, "YYYY-MM-DD-HH-mm-ss-SS").toDate();
+                }
+            }
 
-        // If start date is in the future (ie greater than new Date())
-        if( moment.utc(parsedStart).isAfter( new Date() ) ){
-            alert("Parameter start is greater than current time.");
-            return false;
+            // If start date is in the future (ie greater than new Date())
+            if( moment.utc(parsedStart).isAfter( new Date() ) ){
+                parsedStart = undefined;
+            }
         }
-        
-        // Parse stop timestamp if valid. Leave undefined otherwise as it is not strictly needed. 
-        var parsedStop = moment.utc(stop, "YYYY-MM-DD-HH-mm-ss-SS", true).isValid();
-        if(!parsedStop){    
-            parsedStop = undefined;
+
+        if(parsedStart !== undefined && stop){
+            var validEnd = stop.match(/^(\d{4})-(\d{1,2})-(\d{1,2})-(\d{1,2})-(\d{1,2})-(\d{1,2})-(\d{1,2})$/);        
+            if(validEnd == null || validEnd === undefined){
+                parsedStop = undefined;
+            }
+            else{
+                parsedStop = moment.utc(stop, "YYYY-MM-DD-HH-mm-ss-SS", true).isValid();
+                if(!parsedStop){   
+                    parsedStop = undefined;   
+                }
+                else{
+                    parsedStop = moment.utc(stop, "YYYY-MM-DD-HH-mm-ss-SS").toDate();
+                }
+            }
         }
-        else{
-            parsedStop = moment.utc(stop, "YYYY-MM-DD-HH-mm-ss-SS").toDate();
+
+        if(parsedStop){    
             if( moment(parsedStop).subtract(parsedStart).days() > 1)
             {
                 // Clips cannot be greater than 24 hours in length.
@@ -100,27 +130,73 @@ AudioPlayer.prototype.checkParams = function(){
             }
         }
 
-        // Found station.
-        return { 
+        if(parsedStart === undefined){
+            // We fake our start date as today at 00:00:00.
+            parsedStart = moment.utc( new Date().toDateString() ).toDate();
+        }
+        
+        var config =  { 
             'stationid' : service,
             'start'     : parsedStart,
-            'stop'      : parsedStop
+            'stop'      : parsedStop,
+            'clip'      : false
         };
-    }
-    else if(service !== undefined)
-    {
-        // We fake our start date as today at 00:00:00.
-        var start = moment.utc( new Date().toDateString() ).toDate();
-        return { 
-            'stationid' : service,
-            'start'     : start,
-            'stop'      : undefined
-        };
+        if(parsedStop !== undefined){ config.clip = true; }
+        if(debug){ console.log(config); }
+        return config;
     }
     else{
         return false;
     }
 };
+
+
+/*
+    Get Cookie Params
+*/
+AudioPlayer.prototype.checkCookie = function(){
+    var params = $.cookie();
+    if(!jQuery.isEmptyObject(params)){
+        var volume  = params[playerDefaults.cookieName].volume;
+        var service = params[playerDefaults.cookieName].service;
+
+        if(volume){
+            playerState.volume = parseFloat(volume, 10);
+            jQuery('#volume').html( parseInt(playerState.volume * 100, 10) + '%');            
+        }
+        if(service === undefined){
+            // Should not happen, but catch it here.
+            service = "radio1";
+        }
+
+        var start = moment.utc( new Date().toDateString() ).toDate();
+        var config =  { 
+            'stationid' : service,
+            'start'     : start,
+            'stop'      : undefined,
+            'clip'      : false
+        };
+        return config;
+    }
+    else{
+        return false;
+    }
+};
+
+
+/*
+    Save Cookie Params
+*/
+AudioPlayer.prototype.saveCookie = function(){
+    $.cookie(playerDefaults.cookieName, { 
+        'volume': playerState.volume, 
+        'service': playerState.station
+    },
+    { 
+        expires: playerDefaults.cookieExpire 
+    });
+};
+
 
 /*
     Play first or last 10 seconds of an audio clip assuming we have start || end marked.
@@ -165,32 +241,44 @@ AudioPlayer.prototype.playClipPreview = function(mode){
     - position can either be 'start' or 'end' 
 */
 AudioPlayer.prototype.mark = function(position){
-    var time = moment(playerState.playDate).add('seconds', playerState.elapsed).toDate();
-    var formatted = moment(time).format('HH:mm:ss DD/MM/YYYY');
+    var time = moment.utc(playerState.playDate).add('seconds', playerState.elapsed).toDate();
+    var formatted = moment.utc(time).format('HH:mm:ss DD/MM/YYYY');
+
+    /*
+        If start is after end, clear end.
+
+        If end is before start, clear start.
+
+        If end - start is > 24 hours, warn and clear end.
+    */
     if(position == 'start')
     {
-        if( playerState.markend !== undefined && moment(playerState.markend).isBefore( time ) )
+        if( playerState.markend !== undefined && moment(time).isAfter( playerState.markend  ) )
         {
-            alert("Start position must be before end mark.");
-        }
-        else
-        {
-            playerState.markstart = time;
-            $('#start-point').html('Start: ' + formatted);
-            this.updateEmailLink();
-        }
+            $('#end-point').html('');
+            playerState.markend = undefined;
+        }        
+       
+        playerState.markstart = time;
+        $('#start-point').html('Start: ' + formatted);
+        this.updateEmailLink();
+
     }
     else if(position == 'end')
     {
-        if(playerState.markstart == undefined || moment(playerState.markstart).isAfter( time ) )
+        if(playerState.markstart == undefined || moment(time).isBefore( playerState.markstart ) )
         {
-            alert("Start position must be before end mark.");
-        }   
-        else if( moment(playerState.markstart).diff(time, 'hours') > 24){
+            $('#end-point').html('');
+            playerState.markend = undefined;
+            return false;
+        } 
+        
+        if( moment(playerState.markstart).diff(time, 'hours') > 24){
             alert("Clips cannot be longer than 24 hours in length.");
-        }        
-        else
-        {
+            $('#end-point').html('');
+            playerState.markend = undefined;            
+        }          
+        else{
             playerState.markend = time;
             $('#end-point').html('End: ' + formatted);
             $('#downloadClipMP2').removeClass('disabled');
@@ -435,6 +523,11 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
             var fileBlockID = '#filelist';
             $(fileBlockID).empty();
 
+            // Need to signal the user some how.
+            if(listLength == 0){
+                return false;
+            }
+
             // Handle autoplay function (need one file or more.)
             if(autoplay && ( listLength >= 1) ){
                 playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, true);
@@ -651,7 +744,7 @@ AudioPlayer.prototype.adjustVolume = function(value){
 
     $('#volume').html( parseInt(newVolume * 100, 10) + '%');
     playerState.volume = newVolume;
-    
+    this.saveCookie(); 
 };
 
 /* 
@@ -678,7 +771,8 @@ AudioPlayer.prototype.setStation = function(stationid, name) {
             this.getFileList(stationid, calendarDate, false, 0, 0);
         }
 
-        $('#station_name').html(playerState.stationName);        
+        $('#station_name').html(playerState.stationName); 
+        this.saveCookie();      
     }
 };
 
@@ -809,6 +903,11 @@ AudioPlayer.prototype.init = function() {
 
     /* Check for params that we can use to init the player */
     var preload = this.checkParams();
+    var cookie = this.checkCookie();
+    if(!preload){
+        preload = cookie;
+    }
+
     if(preload){
         playerState.preload = preload;
         playerState.station = preload.stationid;
@@ -819,7 +918,9 @@ AudioPlayer.prototype.init = function() {
 
         $("#datepicker").datepicker("setDate", moment.utc(playerState.preload.start).toDate() );
         playerState.markstart = preload.start;
-        $('#start-point').html('Start: ' + moment(preload.start).format('HH:mm:ss DD/MM/YYYY') );
+        if(preload.clip){
+            $('#start-point').html('Start: ' + moment(preload.start).format('HH:mm:ss DD/MM/YYYY') );
+        }
 
         if(preload.stop !== undefined){
         playerState.markend = preload.end;
@@ -861,6 +962,7 @@ AudioPlayer.prototype.init = function() {
     $(this.id).jPlayer( {
         swfPath:"js/jplayer/jPlayer.swf",
         solution:"html, flash",
+        volume: playerState.volume,
         ready: function () {
            // Any post init for jPlayer. 
         }
@@ -874,7 +976,6 @@ AudioPlayer.prototype.init = function() {
         $('#playbutton').removeClass('rte-icon-play-1'); 
         $('#playbutton').addClass('rte-icon-pause-1'); 
         $('#playing_status').html('PLAYING');
-        
         playerState.state = "PLAYING";
     })
     .bind($.jPlayer.event.pause,      function(e){ 
@@ -895,7 +996,14 @@ AudioPlayer.prototype.init = function() {
         if( event.jPlayer.error.type == 'e_url')
         {
             alert("This program is currently unavailable.");
-            playerObj.advancePlaylist(playerObj, 0); 
+            if(playerState.playFaults > playerState.maxFaults){
+                alert("Program currently unavailable. Please try a different date or station.");
+                $(this.id).jPlayer('stop');
+            }
+            else{
+                playerState.playFaults++;
+                playerObj.advancePlaylist(playerObj, 0); 
+            }
         }
         if(debug){
             console.log("Error Event: type = " + event.jPlayer.error.type);
