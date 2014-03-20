@@ -12,11 +12,23 @@ $date = isset($_GET['date']) ? $_GET['date'] : ( isset($_POST['date']) ? $_POST[
 // Is a callback function referenced?
 $callback = isset($_GET['callback']) ? $_GET['callback'] : ( isset($_POST['callback']) ? $_POST['callback'] : false );
 
-// Get the directory listing and safely exit if there's a problem
-if ( ($dir_listing = scandir($rotter_base_dir . $service . '/' . $date)) === FALSE) die('{
+// Is there a callback?
+if ( $callback !== false ) {
+	echo $callback, '(';
+}
+
+// Begin Output
+echo '{
 	"files":[
-	]
-}');
+';
+
+// Does the requested date exist?
+if ( !is_dir($rotter_base_dir . $service . '/' . $date) ) {
+	// Produce an empty array
+	$dir_listing = array();
+} elseif ( ($dir_listing = scandir($rotter_base_dir . $service . '/' . $date)) === FALSE) {
+	$dir_listing = array();
+}
 
 // Loop through and only keep the relevant audio files
 $i = 0;
@@ -27,16 +39,6 @@ while ( $i < count($dir_listing) ) {
 		$i++;
 	}
 }
-
-// Is there a callback?
-if ( $callback !== false ) {
-	echo $callback, '(';
-}
-
-// Begin Output
-echo '{
-	"files":[
-';
 
 // Per file output
 for ($i = 0; $i < count($dir_listing); $i++) {
@@ -63,6 +65,5 @@ echo '	]
 if ( $callback !== false ) {
         echo ');';
 }
-
 
 ?>
