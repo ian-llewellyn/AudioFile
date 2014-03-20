@@ -5,7 +5,7 @@
  *****************************************************/
 
 // Are we in debug mode?
-var debug = true;
+var debug = false;
 
 // All JSON cookies 
 $.cookie.json = true;
@@ -130,18 +130,19 @@ AudioPlayer.prototype.checkParams = function(){
             }
         }
 
-        if(parsedStart === undefined){
-            // We fake our start date as today at 00:00:00.
-            parsedStart = moment.utc( new Date().toDateString() ).toDate();
-        }
-        
         var config =  { 
             'stationid' : service,
             'start'     : parsedStart,
             'stop'      : parsedStop,
-            'clip'      : false
+            'clip'      : true
         };
-        if(parsedStop !== undefined){ config.clip = true; }
+
+        if(parsedStart === undefined){
+            // We fake our start date as today at 00:00:00.
+            config.start = moment.utc( new Date().toDateString() ).toDate();
+            config.clip = false;
+        }
+        
         if(debug){ console.log(config); }
         return config;
     }
