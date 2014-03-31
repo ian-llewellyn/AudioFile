@@ -10,6 +10,35 @@ should all produce a link to the final time PIP at 07:00 local time:
 ?service=radio1lw&start=2013-10-02-06-00-00-00
 ?service=radio1&start=2013-10-31-07-00-00-00&end=2013-10-31-18-00-00-00
 
+[ ] When a valid query string is passed to the interface with both start and
+end times, the 'Download clip' links should both be enabled. (Only if the
+audio is available? (mp2 and mp3 retention times are different.))
+http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-31-09-00-00-00&end=2014-03-31-09-01-00-00
+
+[ ] Local / UTC Issues:
+    [x] Main Time Display: Local - should be local
+    [ ] Mark Start/End Display: UTC - should be local (It's correct when set
+        via the query string)
+        [ ] Load via query string, then it's possible to set the end to before
+            the start - should be fixed by the parent bug!
+    [ ] Email link: Local - should be UTC
+    [ ] Download links are also based on local time (should be UTC).
+
+[ ] End param missing from email when query string used to generate mark
+    start and end times.
+    http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-31-04-00-00-00&end=2014-03-31-04-05-07-00
+    produces email link of:
+    http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-31-05-00-00-00
+
+[ ] Only mark start appears in the display area:
+    http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-30-04-00-00-00&end=2014-03-30-04-05-07-00
+
+[ ] Clicking on Download clip as ... should not remove start and end marks.
+
+[ ] Download hour as MP2 is only available after clicking on an hour. This
+link should be updated any time an hour is loaded - this appears to be done
+except for when the player loads intially (with and without a query string).
+
 [x] "Start position must be before end mark" - should clear other (start/end) mark instead.
 
 [x] Passing service in as query string param should choose that service.
@@ -33,8 +62,11 @@ Low priority
 ============
 [ ] When switching days, the list index of the hour is used to resume playing
 at the same time another day - time should be used.
+
 [ ] Update hrefs at relevant times rather than relying on a javascript call
 when the link is clicked. (would allow right click -> Save Target As to work)
+
 [ ] "radio1" hardcoded as default service - change to first service in listservices.php
+
 [ ] Services carousel has 'pages' hardcoded by the looks of things.
 
