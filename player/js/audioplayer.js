@@ -508,11 +508,6 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
         date = moment.utc(date).format('YYYY-MM-DD');
     }
 
-    if( moment().isDST() && fileOffset == 23){
-        fileOffset = 0;
-        date = moment(date).format('YYYY-MM-DD');
-    }    
-
     var requestUrl = playerDefaults.filelistUrl + "?service=" + service + "&date=" + date;
     var playerObj = this;
     $.ajax({
