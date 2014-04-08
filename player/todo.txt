@@ -19,7 +19,7 @@ http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-31-09-00-00-00&en
     [x] Main Time Display: Local - should be local
     [x] Mark Start/End Display: UTC - should be local (It's correct when set
         via the query string)
-        [ ] Load via query string, then it's possible to set the end to before
+        [x] Load via query string, then it's possible to set the end to before
             the start - should be fixed by the parent bug!
     [x] Email link: Local - should be UTC
     [x] Download links are also based on local time (should be UTC).
@@ -35,7 +35,7 @@ http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-31-09-00-00-00&en
 
 [x] Clicking on Download clip as ... should not remove start and end marks.
 
-[ ] Download hour as MP2 is only available after clicking on an hour. This
+[x] Download hour as MP2 is only available after clicking on an hour. This
 link should be updated any time an hour is loaded - this appears to be done
 except for when the player loads intially (with and without a query string).
 
@@ -44,7 +44,7 @@ except for when the player loads intially (with and without a query string).
 [x] Passing service in as query string param should choose that service.
 	- Defaults to today at 00:00:00 for playback.
 
-[ ] "This program is currently unavailable" - go back more than six months and
+[x] "This program is currently unavailable" - go back more than six months and
 click on a date for which there are no audios. A bug surfaces that is difficult
 to recover from. I would expect the hours list to simply be empty.
 	

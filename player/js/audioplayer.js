@@ -129,6 +129,11 @@ AudioPlayer.prototype.checkParams = function(){
                 // Clips cannot be greater than 24 hours in length.
                 parsedStop = undefined;
             }
+
+            // Start cannot be after end. 
+            if( moment(parsedStart).utc().isAfter( moment(parsedStop).utc() ) ){
+                parsedStop = undefined;
+            }
         }
 
         var config =  { 
@@ -525,7 +530,8 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
             // Handle autoplay function (need one file or more.)
             if(autoplay && ( listLength >= 1) ){
                 playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, true);
-                $(playerObj.id).jPlayer('play', skip);              
+                $(playerObj.id).jPlayer('play', skip);
+                playerObj.updateDownloadHourLinks();              
             }
 
             for( var i = 0; i < listLength;  i++)
@@ -803,12 +809,6 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset, autoplay) 
     $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );  
 
     $(this.id).jPlayer('play');
-    // if(autoplay){
-    //     $(this.id).jPlayer('play');
-    // }
-    // else{
-    //     $(this.id).jPlayer('pause');   
-    // }
 
     // Highlight selected hour.
     $('.hourblocks').removeClass('navactive');
