@@ -70,6 +70,11 @@ on the email link.
 
 [x] Display date incorrect for last file in the list during IST.
 
+---
+
+[ ] Playing across the 24 hour mark to the next day causes the player to stop.
+
+
 Low priority
 ============
 [ ] When switching days, the list index of the hour is used to resume playing
