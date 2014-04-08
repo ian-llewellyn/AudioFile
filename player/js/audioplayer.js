@@ -273,9 +273,10 @@ AudioPlayer.prototype.mark = function(position){
     {
         if(playerState.markstart == undefined || moment(time).isBefore( playerState.markstart ) )
         {
-            $('#end-point').html('');
-            playerState.markend = undefined;
-            return false;
+            $('#start-point').html('');            
+            playerState.markstart = undefined;
+            playerState.markend = time;
+            $('#end-point').html('End: ' + formatted);
         } 
         
         if( moment(playerState.markstart).diff(time, 'hours') > 24){
@@ -581,7 +582,6 @@ AudioPlayer.prototype.getFileList = function(service, playdate, autoplay, fileOf
     Get a file url.
 */
 AudioPlayer.prototype.getFileUrl = function(format, service, playdate, file){
-    debugger;
     // If we get a date object
     try{
         if(typeof playdate.getMonth === 'function'){
@@ -813,7 +813,6 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
 
     if(playerState.station !== undefined)
     {
-        debugger;
         this.getFileList(playerState.station, date, autoplay, playerState.playlistOffset, playerState.elapsed );
     }
 };
@@ -833,6 +832,10 @@ AudioPlayer.prototype.selectFile = function(filename, playlistOffset, autoplay) 
     $('#play_time').html( moment(playerState.playDate).format('HH:mm:ss') );  
 
     $(this.id).jPlayer('play');
+
+    if( moment().isDST() && playlistOffset == 23){
+        $('#play_date').html( moment(playerState.date).add('days', 1).format('DD/MM/YYYY') );
+    } 
 
     // Highlight selected hour.
     $('.hourblocks').removeClass('navactive');

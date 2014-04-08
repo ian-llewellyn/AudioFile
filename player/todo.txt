@@ -39,11 +39,11 @@ http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-31-09-00-00-00&en
 link should be updated any time an hour is loaded - this appears to be done
 except for when the player loads intially (with and without a query string).
 
-[ ] Still not working when loaded with a query string.
+    [x] Still not working when loaded with a query string.
 
 [x] "Start position must be before end mark" - should clear other (start/end) mark instead.
 
-[ ] Clicking on 'Mark End' when located before a start position sets the start
+[x] Clicking on 'Mark End' when located before a start position sets the start
     marker instead of the end marker.
 
 [x] Passing service in as query string param should choose that service.
@@ -62,12 +62,13 @@ on the email link.
 
 [x] Download !clip! links should not need target="_blank"
 
-[ ] Why does this link set both start and end times in the player:
+[x] Why does this link set both start and end times in the player:
     http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-31-09-00-00-00&end=2014-03-31-09-01-00-00
     and this one doesn't:
     http://audiofile.rte.ie/player_next/?service=2fm&start=2014-03-11-09-00-00-00&end=2014-03-11-09-01-00-00
+    -- Issue with checking if clip covers more than 24 hours.
 
-[ ] Display date incorrect for last file in the list during IST.
+[x] Display date incorrect for last file in the list during IST.
 
 Low priority
 ============
