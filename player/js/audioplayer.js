@@ -123,7 +123,8 @@ AudioPlayer.prototype.checkParams = function(){
         }
 
         if(parsedStop){    
-            if( moment(parsedStop).subtract(parsedStart).days() > 1)
+            //if( moment(parsedStop).subtract(parsedStart).days() > 1)
+            if(moment(parsedStop).utc().subtract( moment(parsedStart).utc()).days() > 1)
             {
                 // Clips cannot be greater than 24 hours in length.
                 parsedStop = undefined;
@@ -243,7 +244,7 @@ AudioPlayer.prototype.playClipPreview = function(mode){
 */
 AudioPlayer.prototype.mark = function(position){
     var time = moment.utc(playerState.playDate).add('seconds', playerState.elapsed).toDate();
-    var formatted = moment.utc(time).format('HH:mm:ss DD/MM/YYYY');
+    var formatted = moment(time).format('HH:mm:ss DD/MM/YYYY');
 
     /*
         If start is after end, clear end.
@@ -343,16 +344,16 @@ AudioPlayer.prototype.updateDownloadHourLinks = function(){
 AudioPlayer.prototype.makeLink = function(){
     var baseUrl = location.protocol + '//' + location.host + location.pathname;
     if(playerState.markstart && playerState.markend){
-        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss-SS");
-        var end = moment(playerState.markend).format("YYYY-MM-DD-HH-mm-ss-SS");
+        var start = moment(playerState.markstart).utc().format("YYYY-MM-DD-HH-mm-ss-SS");
+        var end = moment(playerState.markend).utc().format("YYYY-MM-DD-HH-mm-ss-SS");
         baseUrl += "?service=" + playerState.station + "&start=" + start + "&end=" + end;
     }
     else if( playerState.markstart ){
-        var start = moment(playerState.markstart).format("YYYY-MM-DD-HH-mm-ss-SS");
+        var start = moment(playerState.markstart).utc().format("YYYY-MM-DD-HH-mm-ss-SS");
         baseUrl += "?service=" + playerState.station + "&start=" + start;    
     }
     else{
-        var start = moment(playerState.playDate).format("YYYY-MM-DD-HH-mm-ss-SS");
+        var start = moment(playerState.playDate).utc().format("YYYY-MM-DD-HH-mm-ss-SS");
         baseUrl += "?service=" + playerState.station + "&start=" + start;    
     }
     return baseUrl;
@@ -397,8 +398,8 @@ AudioPlayer.prototype.downloadClip = function(format){
     else if( moment(playerState.markstart).isBefore( playerState.markend ) )
     {
         // Download.
-        start = moment(playerState.markstart).format('YYYY-MM-DD-HH-mm-ss-SS');
-        end   = moment(playerState.markend).format('YYYY-MM-DD-HH-mm-ss-SS');
+        start = moment(playerState.markstart).utc().format('YYYY-MM-DD-HH-mm-ss-SS');
+        end   = moment(playerState.markend).utc().format('YYYY-MM-DD-HH-mm-ss-SS');
 
         if(!format || format === undefined){
             format = playerDefaults.defaultFormat;
@@ -412,15 +413,7 @@ AudioPlayer.prototype.downloadClip = function(format){
         link += "&format="     + format;
         link += "&file_title=" + title;
 
-        jQuery.fileDownload(link);
-        
-        // Should we remove markers after download clicked?
-        playerState.markstart = undefined;
-        playerState.markend = undefined;
-        $('#start-point').empty();
-        $('#end-point').empty();          
-        $('#downloadClipMP2').addClass('disabled');
-        $('#downloadClipMP3').addClass('disabled');      
+        jQuery.fileDownload(link);    
     }
 };
 
@@ -637,7 +630,7 @@ AudioPlayer.prototype.skip = function(seconds){
                 playerState.playlistOffset = 23;
                 playerState.date = moment(previousDay).toDate();
                 playerState.playDate = moment(previousDay).toDate();
-                $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
+                $('#play_date').html( moment(playerState.date).format('DD/MM/YYYY') );
                 $("#datepicker").datepicker("setDate", playerState.playDate );
                 this.getFileList(playerState.station, previousDay, true, playerState.playlistOffset, newTime );
             }
@@ -787,7 +780,7 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
 
     playerState.date = date;
     playerState.playDate = date;
-    $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
+    $('#play_date').html( moment(playerState.date).format('DD/MM/YYYY') );
 
     if(playerState.station !== undefined)
     {
@@ -852,7 +845,7 @@ AudioPlayer.prototype.advancePlaylist = function(playerObj, startTime){
         playerState.playlistOffset = 0;
         playerState.date = nextDay.toDate();
         playerState.playDate = nextDay.toDate();
-        $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
+        $('#play_date').html( moment(playerState.date).format('DD/MM/YYYY') );
         $("#datepicker").datepicker("setDate", nextDay.toDate() );
         playerObj.getFileList(playerState.station, nextDay.toDate(), true, playerState.playlistOffset, startTime );
     }
@@ -915,18 +908,25 @@ AudioPlayer.prototype.init = function() {
         playerState.date = preload.start;
         playerState.playDate = preload.start;
 
-        $('#play_date').html( moment.utc( preload.start ).format('DD/MM/YYYY') ); 
+        $('#play_date').html( moment( preload.start ).format('DD/MM/YYYY') ); 
 
-        $("#datepicker").datepicker("setDate", moment.utc(playerState.preload.start).toDate() );
+        $("#datepicker").datepicker("setDate", moment(playerState.preload.start).toDate() );
         playerState.markstart = preload.start;
         if(preload.clip){
             $('#start-point').html('Start: ' + moment(preload.start).format('HH:mm:ss DD/MM/YYYY') );
         }
 
         if(preload.stop !== undefined){
-        playerState.markend = preload.end;
+            playerState.markend = preload.stop;
             $('#end-point').html('End: ' + moment(preload.stop).format('HH:mm:ss DD/MM/YYYY') );
+
+            //If we have start and stop, allow clip to be downloaded. 
+            $('#downloadClipMP2').removeClass('disabled');
+            $('#downloadClipMP3').removeClass('disabled');            
         }
+
+        // Update our mail link with start/stop
+        this.updateEmailLink();
 
         var onLoadPlay = function(event,playerObj){
             if(event == "stationsLoaded"){
@@ -1012,5 +1012,5 @@ AudioPlayer.prototype.init = function() {
     });
 
     // Set the default displayed date to today.
-    $('#play_date').html( moment.utc(playerState.date).format('DD/MM/YYYY') );
+    $('#play_date').html( moment(playerState.date).format('DD/MM/YYYY') );
 };
