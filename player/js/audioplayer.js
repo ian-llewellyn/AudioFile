@@ -80,7 +80,6 @@ AudioPlayer.prototype.checkParams = function(){
 
     var parsedStart = undefined;
     var parsedStop  = undefined;
-
     // If we have start or service. 
     if(start !== undefined || service !== undefined){
 
@@ -123,8 +122,7 @@ AudioPlayer.prototype.checkParams = function(){
         }
 
         if(parsedStop){    
-            //if( moment(parsedStop).subtract(parsedStart).days() > 1)
-            if(moment(parsedStop).utc().subtract( moment(parsedStart).utc()).days() > 1)
+            if(moment(parsedStop).utc().diff( moment(parsedStart).utc(),'days') > 1)
             {
                 // Clips cannot be greater than 24 hours in length.
                 parsedStop = undefined;
@@ -499,19 +497,25 @@ AudioPlayer.prototype.getServices = function() {
         - fileOffset: If using autoplay, which file should we autoplay
         - skip: If using autoplay, skip X seconds ahead. 
 */
-AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset, skip){
+AudioPlayer.prototype.getFileList = function(service, playdate, autoplay, fileOffset, skip){
     if(service === undefined || service.length === 0){ service = 'radio1' }
-    if(date === undefined || date == ''){ date = new Date(); }
+    if(playdate === undefined || playdate == ''){ playdate = new Date(); }
+    
+    var date = undefined;
 
     // If we get a date object
-    if(typeof date.getMonth === 'function'){
-        date = moment.utc(date).format('YYYY-MM-DD');
-    }
+    if(typeof playdate.getMonth === 'function'){
+        date = moment.utc(playdate).format('YYYY-MM-DD');
 
-    if( moment().isDST() && fileOffset == 23){
-        fileOffset = 0;
-        date = moment(date).format('YYYY-MM-DD');
-    }    
+        if( moment().isDST() && fileOffset == 23){
+            fileOffset = 0;
+            date = moment(playdate).format('YYYY-MM-DD');
+        }         
+    }
+    else
+    {
+        date = playdate;
+    }
 
     var requestUrl = playerDefaults.filelistUrl + "?service=" + service + "&date=" + date;
     var playerObj = this;
@@ -534,9 +538,17 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
 
             // Handle autoplay function (need one file or more.)
             if(autoplay && ( listLength >= 1) ){
-                playerObj.selectFile(filelist.files[ fileOffset ].file, fileOffset, true);
-                $(playerObj.id).jPlayer('play', skip);
-                playerObj.updateDownloadHourLinks();              
+                var fileToAutoplay = ""
+                try{
+                    fileToAutoplay = filelist.files[ fileOffset ].file;
+                    playerObj.selectFile(fileToAutoplay, fileOffset, true);
+                    $(playerObj.id).jPlayer('play', skip);                     
+                }
+                catch(e){
+                    if(debug){
+                        console.log("Cannot play file at offset: " + fileOffset);
+                    }
+                }             
             }
 
             for( var i = 0; i < listLength;  i++)
@@ -554,7 +566,8 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
 
             // Highlight selected hour.
             $('.hourblocks').removeClass('navactive');
-            $('#hourblock_' + fileOffset).addClass('navactive');              
+            $('#hourblock_' + fileOffset).addClass('navactive'); 
+            playerObj.updateDownloadHourLinks();                         
         },
         error: function(e) {
            if(debug){ console.log(e.message); }
@@ -567,13 +580,18 @@ AudioPlayer.prototype.getFileList = function(service, date, autoplay, fileOffset
 /* 
     Get a file url.
 */
-AudioPlayer.prototype.getFileUrl = function(format, service, date, file){
-
+AudioPlayer.prototype.getFileUrl = function(format, service, playdate, file){
+    debugger;
     // If we get a date object
     try{
-        if(typeof date.getMonth === 'function'){
-            date = moment.utc(date).format('YYYY-MM-DD');
+        if(typeof playdate.getMonth === 'function'){
+            date = moment.utc(playdate).format('YYYY-MM-DD');
         }
+
+        if( moment().isDST() ){
+            date = moment(playdate).format('YYYY-MM-DD');
+        }
+
     } catch(e){
         if(debug){ console.log(e); }
     }
@@ -795,6 +813,7 @@ AudioPlayer.prototype.changeDate = function(date, autoplay) {
 
     if(playerState.station !== undefined)
     {
+        debugger;
         this.getFileList(playerState.station, date, autoplay, playerState.playlistOffset, playerState.elapsed );
     }
 };
