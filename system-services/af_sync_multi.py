@@ -283,7 +283,7 @@ class AFMultiServer(object):
             #    output = 'TypeError: Command not implemented'
             connection.send(','.join([str(code), str(len(output)), output]))
 
-            connection.shutdown(socket.SHUT_WR)
+            #connection.shutdown(socket.SHUT_WR)
             #connection.close() # Allow the client call the close() function
                                 # so that TIME_WAIT is on the client side.
             logger.info('AFMultiServer finished writing to %s:%d' % address)
@@ -317,7 +317,7 @@ class AFMultiClient(object):
         the message, and the message itself.
         """
         self.socket.send(message)
-        self.socket.shutdown(socket.SHUT_WR)
+        #self.socket.shutdown(socket.SHUT_WR)
 
         code, length, output = list(self.socket.recv(1024).split(',', 2))
         length = int(length)
@@ -348,6 +348,7 @@ class AFMultiClient(object):
         """
         disconnect() Breaks the connection with the AFMulti instance.
         """
+        self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
         return True
 
@@ -376,8 +377,8 @@ if __name__ == '__main__':
         client = AFMultiClient(params)
 
         if not client.connected:
-            print 'Cannot connect to AFSyncMulti process - perhaps it is ' \
-                'not running.'
+            print 'Cannot connect to AFSyncMulti process - ' \
+                'perhaps it is not running.'
             sys.exit(1)
 
         if command == 'restart':
