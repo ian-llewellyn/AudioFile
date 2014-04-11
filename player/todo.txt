@@ -94,3 +94,4 @@ when the link is clicked. (would allow right click -> Save Target As to work)
 
 [ ] Services carousel has 'pages' hardcoded by the looks of things.
 
+[ ] Preview start or end reloads the file even if the file is already loaded.
