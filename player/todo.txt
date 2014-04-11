@@ -74,6 +74,8 @@ on the email link.
 
 [ ] Playing across the 24 hour mark to the next day causes the player to stop.
 
+[ ] Loading the player and then switching to another station causes "This
+    program is currently unavailable" error.
 
 Low priority
 ============
