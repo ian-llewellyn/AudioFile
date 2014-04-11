@@ -506,7 +506,7 @@ AudioPlayer.prototype.getFileList = function(service, playdate, autoplay, fileOf
 
     // If we get a date object
     if(typeof playdate.getMonth === 'function'){
-        date = moment.utc(playdate).format('YYYY-MM-DD');
+        date = moment(playdate).format('YYYY-MM-DD');
 
         if( moment().isDST() && fileOffset == 23){
             fileOffset = 0;
@@ -789,7 +789,7 @@ AudioPlayer.prototype.setStation = function(stationid, name) {
         {
             this.getFileList(stationid, calendarDate, true, playerState.playlistOffset, playerState.elapsed);
         }
-        else
+    else
         {
             this.getFileList(stationid, calendarDate, false, 0, 0);
         }
