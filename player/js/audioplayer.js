@@ -29,7 +29,7 @@ var playerDefaults = {
     'defaultFormat'        : 'mp3',
     'trackLengthDefault'   : 3600, // Seconds.
     'preload'              : undefined,
-    'clipPreviewLength'    : 10, // Seconds,
+    'clipPreviewLength'    : 5, // Seconds,
     'cookieExpire'         : 30, // days
     'cookieName'           : 'audioplayer'
 };

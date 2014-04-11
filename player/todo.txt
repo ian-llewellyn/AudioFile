@@ -77,6 +77,11 @@ on the email link.
 [x] Loading the player and then switching to another station causes "This
     program is currently unavailable" error.
 
+[ ] Email link does not update when a new hour is selected. It only works for
+    clips.
+
+[ ] Download hour as MP2 is sometimes disabled.
+
 Low priority
 ============
 [ ] When switching days, the list index of the hour is used to resume playing
