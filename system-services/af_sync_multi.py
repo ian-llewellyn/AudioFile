@@ -325,9 +325,6 @@ class AFMultiClient(object):
         while len(output) != length:
             output += self.socket.recv(1024)
 
-        #self.socket.shutdown(socket.SHUT_RD) # Allowing the server shut down
-                                              # the write end of the pipe.
-
         code = int(code)
         return (code, output)
 
@@ -382,6 +379,10 @@ if __name__ == '__main__':
             sys.exit(1)
 
         if command == 'restart':
+            print 'The restart command has been disabled for development.\n' \
+                'Please stop and start the service manually.'
+            client.disconnect()
+            sys.exit(os.EX_USAGE)
             # Determine if we have to restart in the background, foreground, or not at all.
             code, foreground = client.communicate('foreground')
             client.disconnect()
@@ -413,7 +414,9 @@ if __name__ == '__main__':
         + '/af-sync-multi.log'))
     logger.handlers[0].setFormatter(logging.Formatter(fmt='%(asctime)s ' \
         '[%(process)d] [%(levelname)s] Line: %(lineno)d: %(message)s'))
-    logger.level = logging.DEBUG
+    logger.level = DEFAULT_LOG_LEVEL
+    if params.has_key('log_level'):
+        logger.level = params['log_level']
 
     # Start program proper
     logger.info('Starting AFMulti process')
