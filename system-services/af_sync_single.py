@@ -388,12 +388,10 @@ class AFSingle(set):
         if datetime.datetime.now() < self._next_run_time:
             self.logger.info('next run time not reached yet, '
                              'returning from step()')
-            self.logger.debug('self._next_run_time: %s' % self._next_run_time)
             return None
 
         self._next_run_time = datetime.datetime.now() + datetime.timedelta(
             milliseconds=self.main_loop_min_time)
-        self.logger.debug('Set self._next_run_time: %s' % self._next_run_time)
 
         if self.fetch_delta():
             self._delta_failures = 0

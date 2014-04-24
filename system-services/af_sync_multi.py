@@ -463,7 +463,6 @@ if __name__ == '__main__':
     while running:
         next_run_time = datetime.datetime.now() + datetime.timedelta(
             milliseconds=params['main_loop_min_time'])
-        logger.debug('next_run_time: %s' % next_run_time)
 
         for instance in multi:
             instance.step()
