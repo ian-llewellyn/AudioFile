@@ -177,7 +177,7 @@ class AFSingle(set):
         such as: http://host/format/service/date/
         """
         self.logger.debug('Called get_file_list()')
-        date = datetime.datetime.now().strftime('%Y-%m-%d') \
+        date = datetime.datetime.utcnow().strftime('%Y-%m-%d') \
                if not self.date else self.date.strftime('%Y-%m-%d')
         req = urllib2.Request('http://%s/webservice/v2/listfiles.php?'
                               'format=%s&service=%s&date=%s' % \
