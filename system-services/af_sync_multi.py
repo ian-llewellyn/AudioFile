@@ -288,6 +288,9 @@ class AFMultiServer(object):
                                 # so that TIME_WAIT is on the client side.
             logger.info('AFMultiServer finished writing to %s:%d' % address)
 
+            # Prevent TIME_WAIT from delaying a restart of the service
+            time.sleep(1)
+
 class AFMultiClient(object):
     """
     This is a TCP client that connects on the configured port to an
@@ -471,6 +474,7 @@ if __name__ == '__main__':
         now = datetime.datetime.now()
         if now < next_run_time:
             sleep_time = (next_run_time - now).seconds + \
-                         (next_run_time - now).microseconds / 1000000.0
+                         (next_run_time - now).microseconds / 1000000.0 + \
+                         0.02
             logger.info('Main loop sleeping for %f seconds' % sleep_time)
             time.sleep(sleep_time)
