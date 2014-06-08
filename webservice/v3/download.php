@@ -16,7 +16,7 @@ date_default_timezone_set('UTC');
 // 3 - operations
 // 4 - operations incl. repeated ones
 // 5 - lots of info
-$log_level = 5;
+$log_level = 4;
 $log_file = '/var/log/audiofile/download.log';
 
 // Logging function
