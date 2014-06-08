@@ -35,7 +35,7 @@ while ( true ) {
 	$dir_listing = array_filter($dir_listing, "dir_listing_filter");
 
 	$latest_file = array_pop($dir_listing);
-#echo $latest_file;
+
 	// Find out how much of it is written
 	$handle = fopen($rotter_base_dir . $service . '/' . $start_date . '/' . $latest_file, 'r');
 	fseek($handle, 0, SEEK_END);
@@ -44,7 +44,7 @@ while ( true ) {
 	$delta_failures = 0;
 	while ( $delta_failures <= 3 ) {
 		// Wait a moment
-		sleep(0.75);
+		sleep(1);
 
 		$last_length = $current_length;
 
@@ -53,7 +53,6 @@ while ( true ) {
 		$current_length = ftell($handle);
 
 		$chunk_size = $current_length - $last_length;
-#echo $chunk_size;
 		if ( $chunk_size <= 0 ) {
 			$delta_failures++;
 			continue;
