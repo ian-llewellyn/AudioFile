@@ -82,6 +82,8 @@ on the email link.
 
 [ ] Download hour as MP2 is sometimes disabled.
 
+[ ] Skip buttons do not work in pause mode.
+
 Low priority
 ============
 [ ] When switching days, the list index of the hour is used to resume playing
