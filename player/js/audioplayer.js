@@ -583,6 +583,13 @@ AudioPlayer.prototype.getFileList = function(service, playdate, autoplay, fileOf
 */
 AudioPlayer.prototype.getFileUrl = function(format, service, playdate, file){
     // If we get a date object
+
+    // JM 2014-10-29:
+    // typeof returns undefined for dates selected in the calendar (datepicker) from the past (before today).
+    // If isDST returns false (Oct to Mar) and typeof returns undefined, then date does not get assigned a value.
+    // The workaround is to add an else to "if( moment().isDST() ){" which assigns a value to date.
+    // This still needs further analysis of what the code is trying to accomplish with typeof and isDST().
+    
     try{
         if(typeof playdate.getMonth === 'function'){
             date = moment.utc(playdate).format('YYYY-MM-DD');
@@ -590,7 +597,9 @@ AudioPlayer.prototype.getFileUrl = function(format, service, playdate, file){
 
         if( moment().isDST() ){
             date = moment(playdate).format('YYYY-MM-DD');
-        }
+        } else {
+            date = moment.utc(playdate).format('YYYY-MM-DD');
+	}
 
     } catch(e){
         if(debug){ console.log(e); }
