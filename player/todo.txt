@@ -97,3 +97,9 @@ when the link is clicked. (would allow right click -> Save Target As to work)
 [ ] Services carousel has 'pages' hardcoded by the looks of things.
 
 [ ] Preview start or end reloads the file even if the file is already loaded.
+
+[ ] There is a reliance on the existance of certain cookies - this only seems
+to manifest itself when cookies are already present for the site, but a
+particular one is missing. In an upgrade from one version to a later one, the
+volume parameter was added - this caused problems on clients that had 'seen'
+the previous version.
